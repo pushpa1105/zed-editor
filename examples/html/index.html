@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zeditor — plain HTML example (no framework, no build step)</title>
+    <!--
+      No framework, no TypeScript, no bundler. After `npm install @z-packages/zeditor`
+      this page works as-is from any static file server.
+    -->
+    <link rel="stylesheet" href="./node_modules/@z-packages/zeditor/dist/style.css" />
+    <script type="importmap">
+      { "imports": { "@z-packages/zeditor": "./node_modules/@z-packages/zeditor/dist/zeditor.browser.js" } }
+    </script>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
+      main { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+      .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+      button, select { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; }
+      button[aria-pressed="true"] { background: #2563eb; color: #fff; border-color: #2563eb; }
+      #status { color: #4b5563; font-size: 14px; }
+      pre { background: #111827; color: #e5e7eb; padding: 12px; border-radius: 8px; overflow: auto; max-height: 260px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>zeditor — plain HTML</h1>
+      <div class="bar" role="group" aria-label="Editor controls">
+        <button id="mode-classic" aria-pressed="true">Classic</button>
+        <button id="mode-block" aria-pressed="false">Blocks</button>
+        <button id="save">Save JSON</button>
+        <button id="reload">Reload saved JSON</button>
+        <button id="clear">Clear saved</button>
+        <span id="status" role="status" aria-live="polite"></span>
+      </div>
+      <div id="editor"></div>
+      <h2>Saved JSON</h2>
+      <pre id="json" aria-label="Saved document JSON"></pre>
+    </main>
+
+    <script type="module">
+      import { createEditor, codeHighlightExtension } from '@z-packages/zeditor';
+      import { issueRefExtension, calloutExtension } from '../shared/extensions.js';
+
+      const KEY = 'zeditor-html-example';
+      const saved = localStorage.getItem(KEY);
+      const starter = [
+        { id: 'h', type: 'heading', attrs: { level: 1 }, content: [{ text: 'Hello from plain HTML' }] },
+        { id: 'p', type: 'paragraph', content: [{ text: 'Edit me, switch modes, then ' }, { text: 'save and reload', marks: { bold: true } }, { text: '. In Blocks mode type / for commands.' }] },
+        { id: 'c', type: 'list', attrs: { kind: 'check', checked: false }, content: [{ text: 'A checklist item' }] },
+      ];
+
+      const z = createEditor({
+        element: '#editor',
+        content: saved ? JSON.parse(saved) : starter,
+        // the same framework-independent extensions the React and Vue examples use
+        extensions: [codeHighlightExtension(), issueRefExtension(), calloutExtension()],
+        ui: { statusBar: true },
+        placeholder: 'Write something…',
+      });
+      window.z = z; // handy in the console
+
+      const status = document.getElementById('status');
+      const out = document.getElementById('json');
+      const show = () => (out.textContent = localStorage.getItem(KEY) ?? '(nothing saved yet)');
+      show();
+
+      const setMode = (mode) => {
+        z.setMode(mode);
+        document.getElementById('mode-classic').setAttribute('aria-pressed', String(mode === 'classic'));
+        document.getElementById('mode-block').setAttribute('aria-pressed', String(mode === 'block'));
+        z.focus();
+      };
+      document.getElementById('mode-classic').onclick = () => setMode('classic');
+      document.getElementById('mode-block').onclick = () => setMode('block');
+      document.getElementById('save').onclick = () => {
+        localStorage.setItem(KEY, JSON.stringify(z.getJSON(), null, 2));
+        status.textContent = 'Saved at ' + new Date().toLocaleTimeString();
+        show();
+      };
+      document.getElementById('reload').onclick = () => {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return (status.textContent = 'Nothing saved yet');
+        const issues = z.setJSON(JSON.parse(raw));
+        status.textContent = issues.length ? 'Reloaded with ' + issues.length + ' issue(s)' : 'Reloaded';
+      };
+      document.getElementById('clear').onclick = () => {
+        localStorage.removeItem(KEY);
+        show();
+        status.textContent = 'Cleared';
+      };
+    </script>
+  </body>
+</html>

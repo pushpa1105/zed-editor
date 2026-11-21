@@ -529,6 +529,8 @@ export class Editor {
   setMode(mode: EditorMode): void {
     if (mode === this.mode) return;
     this.mode = mode;
+    // no entry is added, but edits made before and after the switch do not merge into one
+    this.cutHistory();
     this.emit('mode', { mode });
     this.emit('update');
   }

@@ -479,7 +479,8 @@ export const insertText: CommandFn = (editor, text: string, opts: { marks?: Mark
       if (editor.storedMarks) tr.setMeta('storedMarks', editor.storedMarks);
       handled = true;
     },
-    { group: /\s/.test(text) && text.length === 1 ? 'type-space' : 'type' },
+    // consecutive typing merges into one undo entry until a pause (history delay) or another kind of edit
+    { group: 'type' },
   );
   if (ok && handled && opts.rules !== false) runInputRules(editor);
   return ok;

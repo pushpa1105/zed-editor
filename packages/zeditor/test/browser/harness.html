@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>zeditor test harness</title>
+    <link rel="stylesheet" href="/node_modules/@z-packages/zeditor/dist/style.css" />
+    <script type="importmap">
+      { "imports": { "@z-packages/zeditor": "/node_modules/@z-packages/zeditor/dist/zeditor.browser.js" } }
+    </script>
+    <style>
+      body { margin: 0; padding: 40px 80px; font-family: system-ui, sans-serif; }
+      #a, #b { margin-bottom: 24px; }
+    </style>
+  </head>
+  <body>
+    <div id="a"></div>
+    <div id="b"></div>
+    <div id="side"></div>
+    <script type="module">
+      import * as Z from '@z-packages/zeditor';
+      import { issueRefExtension, calloutExtension, SHARED_DOCUMENT } from '/examples/shared/extensions.js';
+      window.Z = Z;
+      window.shared = { issueRefExtension, calloutExtension, SHARED_DOCUMENT };
+      window.errors = [];
+      window.addEventListener('error', (e) => window.errors.push(String(e.message)));
+      window.addEventListener('unhandledrejection', (e) => window.errors.push(String(e.reason)));
+      // mount(options, target?) -> instance, kept on window.z / window.z2
+      window.mount = (options = {}, target = '#a') => {
+        const z = Z.createEditor({ element: target, ...options });
+        if (target === '#a') window.z = z;
+        else window.z2 = z;
+        return z;
+      };
+      window.ready = true;
+    </script>
+  </body>
+</html>

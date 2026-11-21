@@ -12,5 +12,5 @@
     "isolatedModules": true,
     "types": ["node"]
   },
-  "include": ["src/core.ts", "src/core", "src/features", "test"]
+  "include": ["src", "test"]
 }
