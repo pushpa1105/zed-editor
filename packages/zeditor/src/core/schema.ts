@@ -256,8 +256,10 @@ export class Schema {
     let children: Block[] | undefined;
     if (spec.kind === 'text') {
       content = this.parseInline(raw.content, spec, issues);
-      if (spec.children === true && Array.isArray(raw.children) && raw.children.length) {
-        children = this.parseBlocks(raw.children, raw, seen, issues);
+      // commands only nest under types that declare `children: true`, but merged concurrent
+      // edits can leave children under any text block: they are kept, never dropped
+      if (Array.isArray(raw.children) && raw.children.length) {
+        children = this.parseBlocks(raw.children, { type: 'paragraph' }, seen, issues);
         if (!children.length) children = undefined;
       }
     } else if (spec.kind === 'container') {

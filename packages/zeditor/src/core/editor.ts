@@ -210,6 +210,8 @@ export interface HistoryProvider {
   canUndo(): boolean;
   canRedo(): boolean;
   clear?(): void;
+  /** start a new undo entry at the next change */
+  cut?(): void;
 }
 
 class History implements HistoryProvider {
@@ -429,6 +431,7 @@ export class Editor {
     const tr = (this.tr = new Transaction(this));
     const origin = opts.origin ?? 'local';
     tr.meta.origin = origin;
+    tr.meta.addToHistory = opts.history !== false;
     let ok = true;
     let error: unknown;
     try {
@@ -508,7 +511,7 @@ export class Editor {
   }
   /** Start a new undo entry at the next change. */
   cutHistory(): void {
-    this.builtinHistory?.cut();
+    this.history.cut?.();
   }
   undo(): boolean {
     return this.history.undo();

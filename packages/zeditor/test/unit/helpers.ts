@@ -41,7 +41,7 @@ export function checkInvariants(e: Editor) {
     if (kind === 'text' && b.children && !b.children.length) throw new Error('empty children array on text block ' + b.id);
     if (kind === 'container' && !e.schema.node(b.type)!.allowEmpty && !(b.children && b.children.length)) throw new Error('empty container ' + b.type);
     if (kind === 'atom' && (b.content || b.children)) throw new Error('atom with content');
-    if (parent !== e.doc.root && b.type !== 'unknown' && !e.schema.canContain(parent, b.type)) throw new Error(`${b.type} not allowed in ${parent.type}`);
+    if (parent !== e.doc.root && b.type !== 'unknown' && e.schema.kind(parent) !== 'text' && !e.schema.canContain(parent, b.type)) throw new Error(`${b.type} not allowed in ${parent.type}`);
     if (b.content)
       for (let i = 0; i < b.content.length; i++) {
         const y = b.content[i];

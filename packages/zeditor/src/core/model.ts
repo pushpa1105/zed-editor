@@ -142,6 +142,23 @@ export function marksAt(content: readonly Inline[] | undefined, offset: number):
   return content[content.length - 1].marks;
 }
 
+/** Is `offset` between the two halves of a surrogate pair? */
+export function splitsPair(content: readonly Inline[] | undefined, offset: number): boolean {
+  if (!content || offset <= 0) return false;
+  let pos = 0;
+  for (const c of content) {
+    const len = inlineLen(c);
+    if (offset > pos && offset < pos + len && !isAtom(c)) {
+      const lo = c.text.charCodeAt(offset - pos);
+      const hi = c.text.charCodeAt(offset - pos - 1);
+      return lo >= 0xdc00 && lo <= 0xdfff && hi >= 0xd800 && hi <= 0xdbff;
+    }
+    pos += len;
+    if (pos >= offset) break;
+  }
+  return false;
+}
+
 export function inlineAt(content: readonly Inline[] | undefined, offset: number): Inline | undefined {
   let pos = 0;
   if (content)

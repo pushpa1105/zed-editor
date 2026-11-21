@@ -756,6 +756,13 @@ export class EditorView {
       e.preventDefault();
       return;
     }
+    // focus is in an embedded control (caption, language select...) but the browser routed an
+    // editing command to the editing host: never let it touch the document DOM
+    const active = this.root.ownerDocument.activeElement as HTMLElement | null;
+    if (active && active !== this.root && this.root.contains(active) && active.closest('[data-z-ignore]')) {
+      e.preventDefault();
+      return;
+    }
     const type = e.inputType;
     if (type === 'insertCompositionText' || type === 'deleteCompositionText' || type === 'insertFromComposition' || this.composing) return; // native, reconciled on input
     this.flushSelection();

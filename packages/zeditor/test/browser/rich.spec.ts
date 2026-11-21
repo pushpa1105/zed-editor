@@ -298,7 +298,8 @@ test.describe('rich content', () => {
     expect(j[0].attrs.src).toMatch(/^data:image\/png/);
     expect(j[0].attrs.uploadId).toBeUndefined();
     // caption and alt text
-    await page.locator('#a .z-caption').fill('A tiny dot');
+    await page.locator('#a .z-caption').click();
+    await page.keyboard.type('A tiny dot'); // real key events, as a user would type
     await page.locator('#a .z-caption').press('Enter');
     await page.locator('#a .z-alt-btn').click({ force: true });
     await page.locator('.z-prompt input').fill('One pixel');

@@ -1,4 +1,4 @@
-import { Block, Doc } from './model';
+import { Block, Doc, splitsPair } from './model';
 import { Schema } from './schema';
 import { Step, mapOffset } from './steps';
 
@@ -152,7 +152,12 @@ export function fixSelection(sel: Selection | null, doc: Doc, schema: Schema): S
   if (sel.type === 'text') {
     const fix = (p: Point): Point | null => {
       const b = doc.get(p.id);
-      if (b && schema.isText(b)) return { id: p.id, offset: Math.max(0, Math.min(p.offset, b.length)) };
+      if (b && schema.isText(b)) {
+        let offset = Math.max(0, Math.min(p.offset, b.length));
+        // a caret can never sit inside a surrogate pair (stale or foreign positions can point there)
+        if (splitsPair(b.content, offset)) offset--;
+        return { id: p.id, offset };
+      }
       return null;
     };
     let a = fix(sel.anchor);
