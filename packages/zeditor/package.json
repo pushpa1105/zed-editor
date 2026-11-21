@@ -17,6 +17,7 @@
     "./collab": { "types": "./dist/collab.d.ts", "import": "./dist/collab.js" },
     "./code-highlight": { "types": "./dist/code-highlight.d.ts", "import": "./dist/code-highlight.js" },
     "./browser": "./dist/zeditor.browser.js",
+    "./collab/browser": "./dist/zeditor.collab.browser.js",
     "./style.css": "./dist/style.css",
     "./package.json": "./package.json"
   },

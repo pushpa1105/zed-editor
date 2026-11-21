@@ -192,6 +192,21 @@ export function createEditor(options: CreateEditorOptions): ZEditor {
       toolbar = createToolbar(editor, { items: Array.isArray(ui.toolbar) ? ui.toolbar : undefined, icons: options.icons });
       top.append(toolbar.dom);
       parts.push(toolbar);
+      const tb = toolbar.dom;
+      const toToolbar = (e: KeyboardEvent) => {
+        if (e.altKey && e.key === 'F10') {
+          e.preventDefault();
+          (tb.querySelector('.z-tool[tabindex="0"]:not(:disabled)') ?? tb.querySelector<HTMLElement>('.z-tool:not(:disabled)'))?.dispatchEvent(new Event('focusin', { bubbles: true }));
+          (tb.querySelector<HTMLElement>('.z-tool[tabindex="0"]:not(:disabled)') ?? tb.querySelector<HTMLElement>('.z-tool:not(:disabled)'))?.focus();
+        }
+      };
+      content.addEventListener('keydown', toToolbar);
+      parts.push({ destroy: () => content.removeEventListener('keydown', toToolbar) });
+      // Escape in the toolbar returns to the text
+      const back = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && !e.defaultPrevented) view.focus();
+      };
+      tb.addEventListener('keydown', back);
     }
     if (ui.pageTabs && editor.hasExtension('pages')) parts.push(createPageTabs(editor, top));
     if (ui.find) parts.push(createFindPanel(editor, top));

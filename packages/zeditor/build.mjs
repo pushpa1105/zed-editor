@@ -49,6 +49,21 @@ await build({
   logLevel: 'warning',
 });
 
+// collaboration for pages without a build step: bundles Yjs (it only shares types with the editor bundle)
+await build({
+  absWorkingDir: root,
+  entryPoints: ['src/collab.ts'],
+  outfile: 'dist/zeditor.collab.browser.js',
+  format: 'esm',
+  bundle: true,
+  minify: true,
+  target: 'es2020',
+  platform: 'browser',
+  sourcemap: true,
+  legalComments: 'none',
+  logLevel: 'warning',
+});
+
 await build({ absWorkingDir: root, entryPoints: ['src/style.css'], outfile: 'dist/style.css', bundle: true, minify: true, logLevel: 'warning' });
 
 // type declarations

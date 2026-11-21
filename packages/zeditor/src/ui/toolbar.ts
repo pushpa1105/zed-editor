@@ -116,7 +116,7 @@ function colorPopover(editor: Editor, anchor: HTMLElement, item: ToolbarItem, on
     close();
     anchor.focus();
   }, { ignore: anchor });
-  (grid.querySelector('[aria-pressed="true"]') as HTMLElement | null)?.focus?.();
+  ((grid.querySelector('[aria-pressed="true"]') ?? grid.querySelector('button')) as HTMLElement | null)?.focus();
 }
 
 export function createToolbar(editor: Editor, opts: ToolbarOptions = {}): UIHandle {
@@ -205,6 +205,15 @@ export function createToolbar(editor: Editor, opts: ToolbarOptions = {}): UIHand
   let raf: any = 0;
   const update = () => {
     for (const u of updaters) u();
+    // the toolbar's single tab stop must be a control that can take focus
+    const stop = dom.querySelector<HTMLButtonElement>('.z-tool[tabindex="0"]');
+    if (!stop || stop.disabled) {
+      const first = dom.querySelector<HTMLElement>('.z-tool:not(:disabled)');
+      if (first && document.activeElement !== stop) {
+        if (stop) stop.tabIndex = -1;
+        first.tabIndex = 0;
+      }
+    }
   };
   const schedule = () => {
     if (raf) return;

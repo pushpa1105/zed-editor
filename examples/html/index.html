@@ -58,7 +58,7 @@
         ui: { statusBar: true },
         placeholder: 'Write something…',
       });
-      window.z = z; // handy in the console
+      window.z = window.__z = z; // handy in the console
 
       const status = document.getElementById('status');
       const out = document.getElementById('json');

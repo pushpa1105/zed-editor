@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zeditor — two-client collaboration example</title>
+    <link rel="stylesheet" href="./node_modules/@z-packages/zeditor/dist/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@z-packages/zeditor": "./node_modules/@z-packages/zeditor/dist/zeditor.browser.js",
+          "@z-packages/zeditor/collab": "./node_modules/@z-packages/zeditor/dist/zeditor.collab.browser.js"
+        }
+      }
+    </script>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
+      main { max-width: 1280px; margin: 20px auto; padding: 0 16px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+      .client header { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: #16a34a; display: inline-block; }
+      .dot.off { background: #dc2626; }
+      button { font: inherit; padding: 5px 10px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; }
+      .peers { font-size: 13px; color: #4b5563; }
+      p.note { color: #4b5563; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>zeditor — collaboration</h1>
+      <p class="note">
+        Two independent editors, each with its own Yjs document, connected through an in-memory hub. Type in both, select text to see remote
+        selections, take one client offline, keep editing on both sides, then reconnect: the changes merge. Undo only reverts your own edits.
+        Add <code>?room=demo</code> to the URL to collaborate between browser tabs instead (BroadcastChannel).
+      </p>
+      <div class="grid" id="grid"></div>
+    </main>
+
+    <script type="module">
+      import { createEditor } from '@z-packages/zeditor';
+      import { Y, createCollab, connectSync, memoryHub, broadcastChannelTransport, yCommentStore } from '@z-packages/zeditor/collab';
+
+      const room = new URLSearchParams(location.search).get('room');
+      const hub = memoryHub();
+      const clients = (window.clients = []);
+
+      async function addClient(name, color, seedContent) {
+        const el = document.createElement('section');
+        el.className = 'client';
+        el.innerHTML = `<header><span class="dot"></span><strong></strong><button class="toggle">Go offline</button><button class="undo">Undo</button><span class="peers" role="status"></span></header><div class="mount"></div>`;
+        el.querySelector('strong').textContent = name;
+        document.getElementById('grid').append(el);
+
+        const doc = new Y.Doc();
+        const z = createEditor({ element: el.querySelector('.mount'), content: seedContent ?? null, mode: 'classic', placeholder: 'Type here…', maxHeight: '60vh' });
+        // identity, transport and permissions are host adapters; nothing here is trusted by a real backend
+        const collab = createCollab(z.editor, { doc, user: { id: name.toLowerCase(), name, color }, seed: false });
+        const transport = room ? broadcastChannelTransport('zeditor-' + room) : hub.endpoint();
+        const sync = connectSync(doc, collab.awareness, transport);
+        sync.connect();
+        // the first client in an empty room provides the initial content; later ones receive it
+        if (!(await sync.whenSynced(room ? 600 : 50)) && collab.isEmpty()) collab.seed();
+
+        const dot = el.querySelector('.dot');
+        const toggle = el.querySelector('.toggle');
+        const peers = el.querySelector('.peers');
+        sync.onStatus(({ connected }) => {
+          dot.classList.toggle('off', !connected);
+          toggle.textContent = connected ? 'Go offline' : 'Reconnect';
+        });
+        toggle.onclick = () => (sync.connected ? sync.disconnect() : sync.connect());
+        el.querySelector('.undo').onclick = () => {
+          z.editor.undo();
+          z.focus();
+        };
+        const showPeers = (states) => (peers.textContent = states.length ? 'with ' + states.map((s) => s.user.name).join(', ') : 'alone');
+        collab.onPresence(showPeers);
+        showPeers(collab.remoteStates());
+        const client = { name, z, collab, sync, doc, comments: yCommentStore(doc) };
+        clients.push(client);
+        return client;
+      }
+
+      const starter = [
+        { id: 'h', type: 'heading', attrs: { level: 2 }, content: [{ text: 'Shared notes' }] },
+        { id: 'p', type: 'paragraph', content: [{ text: 'Edit this paragraph from both clients at once.' }] },
+      ];
+      if (room) await addClient('Tab ' + Math.floor(Math.random() * 900 + 100), undefined, starter);
+      else {
+        await addClient('Ann', '#e11d48', starter);
+        await addClient('Bob', '#2563eb');
+      }
+      window.ready = true;
+    </script>
+  </body>
+</html>

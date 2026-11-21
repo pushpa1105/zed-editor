@@ -87,6 +87,7 @@ export class EditorView {
   private dragCell: { table: string; anchor: string } | null = null;
   private destroyed = false;
   private suppressSelection = 0;
+  private escapeArmed = false;
 
   constructor(
     readonly editor: Editor,
@@ -200,6 +201,14 @@ export class EditorView {
 
   private renderInline(view: BlockView, block: Block, force = false): void {
     const el = view.handle.contentDOM!;
+    if (this.composing && !force && view.id === this.composeBlock && readDOMText(el) === block.text) {
+      // An IME is composing in this block and the DOM already shows the model's text.
+      // Replacing or re-wrapping its text node now would abort the composition, so the DOM
+      // is left exactly as the browser made it; it is normalized on compositionend.
+      view.content = block.content;
+      if (block.content!.length) el.removeAttribute('data-empty');
+      return;
+    }
     patchInline(el, view.inline!, block.content ?? [], this.ctx, { mark: this.markR, inline: this.inlineR }, force);
     view.content = block.content;
     if (block.content!.length) el.removeAttribute('data-empty');
@@ -998,6 +1007,12 @@ export class EditorView {
     if (e.isComposing || e.keyCode === 229 || this.composing) return;
     const editor = this.editor;
     const key = keyName(e);
+    // Tab indents, so it cannot move focus. Pressing Escape first releases the next
+    // Tab / Shift+Tab to the browser, which moves focus out of the editor.
+    const armed = this.escapeArmed;
+    // modifier keys on their own (the Shift of Shift+Tab) do not disarm
+    if (e.key !== 'Shift' && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta') this.escapeArmed = key === 'Escape';
+    if (armed && (key === 'Tab' || key === 'Shift-Tab')) return;
     if (editor.readOnly) {
       // navigation, copy and select-all stay available
       if (key === 'Mod-a') {
@@ -1160,6 +1175,7 @@ export class EditorView {
   /* ------------------------------------------------------------------ pointer */
 
   private onMouseDown = (e: MouseEvent): void => {
+    this.escapeArmed = false;
     if (this.ignored(e)) return;
     const t = e.target as HTMLElement;
     const editor = this.editor;
