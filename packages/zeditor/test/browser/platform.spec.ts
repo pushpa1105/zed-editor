@@ -309,6 +309,34 @@ test.describe('instances and lifecycle', () => {
     await noErrors(page);
   });
 
+  test('a host renderer that throws falls back to the default and the editor keeps working', async ({ page }) => {
+    await open(page, { content: [p('before', 'a'), p('broken', 'b')] }, `o.renderers = { paragraph: (block) => { if (block.id === 'b') throw new Error('renderer exploded'); return window.Z.nodeRenderers.paragraph(block, { editor: null }); } };`);
+    await expect(page.locator('#a [data-zid="b"]')).toHaveText('broken');
+    await setSel(page, 'b', 6);
+    await page.keyboard.type(' but editable');
+    expect(await texts(page)).toBe('before|broken but editable');
+  });
+
+  test('dropping an image file uploads it at the drop position', async ({ page }) => {
+    await open(page, { content: [p('first', 'a'), p('second', 'b')] }, `o.upload = async (file) => ({ url: 'https://cdn.example/' + file.name });`);
+    const dropped = await page.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([new Uint8Array([137, 80, 78, 71])], 'dropped.png', { type: 'image/png' }));
+      const target = document.querySelector('#a [data-zid="b"] .z-content')!;
+      const r = target.getBoundingClientRect();
+      const ev = new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 5, clientY: r.top + 5 });
+      const ok = !!ev.dataTransfer && ev.dataTransfer.files.length === 1;
+      if (ok) target.dispatchEvent(ev);
+      return ok;
+    });
+    test.skip(!dropped, 'this engine does not let scripts attach files to a synthetic DragEvent');
+    await expect(page.locator('#a .z-image img')).toHaveAttribute('src', 'https://cdn.example/dropped.png');
+    const j = await json(page);
+    // inserted after the block it was dropped on; an empty paragraph follows so typing can continue
+    expect(j.map((b: any) => b.type)).toEqual(['paragraph', 'paragraph', 'image', 'paragraph']);
+    await noErrors(page);
+  });
+
   test('autosave status, draft recovery after a "crash", and block links', async ({ page }) => {
     await open(page, { content: [p('start', 'a'), p('target block', 'deep')], ui: { statusBar: true } }, `
       window.saves = [];

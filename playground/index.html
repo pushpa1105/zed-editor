@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zeditor playground</title>
+    <link rel="stylesheet" href="./node_modules/@z-packages/zeditor/dist/style.css" />
+    <script type="importmap">
+      { "imports": { "@z-packages/zeditor": "./node_modules/@z-packages/zeditor/dist/zeditor.browser.js" } }
+    </script>
+    <style>
+      :root { color-scheme: light dark; }
+      [hidden] { display: none !important; }
+      body { font-family: system-ui, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
+      body.dark { background: #0d0f13; color: #e6e8ec; }
+      header.app { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; background: #111827; color: #fff; position: sticky; top: 0; z-index: 100; }
+      header.app h1 { font-size: 16px; margin: 0 12px 0 0; }
+      header.app label { font-size: 13px; display: inline-flex; gap: 4px; align-items: center; }
+      header.app select, header.app button, .panel button, .panel select { font: inherit; font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid #4b5563; background: #1f2937; color: #fff; cursor: pointer; }
+      .panel button, .panel select { background: #fff; color: #111827; border-color: #d1d5db; }
+      body.dark .panel button, body.dark .panel select { background: #1d2027; color: #e6e8ec; border-color: #30343d; }
+      .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; padding: 16px; align-items: start; }
+      @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+      .panel { background: #fff; border: 1px solid #d9dde3; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
+      body.dark .panel { background: #15171c; border-color: #30343d; }
+      .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 8px; color: #6b7280; }
+      .toggles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 10px; }
+      .row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; align-items: center; }
+      pre.out { background: #111827; color: #e5e7eb; padding: 10px; border-radius: 6px; overflow: auto; max-height: 340px; font-size: 11.5px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; }
+      [role=tab][aria-selected=true] { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+      #custom-toolbar { display: flex; gap: 6px; padding: 8px; border: 1px dashed #9ca3af; border-radius: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+      #custom-toolbar button[aria-pressed=true] { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+      /* customization example: re-theme through CSS variables only */
+      .zeditor.brand { --z-accent: #7c3aed; --z-radius: 16px; --z-font: Georgia, 'Times New Roman', serif; --z-content-padding: 28px 64px; }
+    </style>
+  </head>
+  <body>
+    <header class="app">
+      <h1>zeditor playground</h1>
+      <label>Mode <select id="mode"><option value="classic">Classic</option><option value="block">Blocks</option></select></label>
+      <label>Theme <select id="theme"><option>light</option><option>dark</option><option>auto</option></select></label>
+      <label>Look <select id="look"><option value="default">Default</option><option value="brand">CSS-variable theme</option><option value="unstyled">Unstyled</option></select></label>
+      <label>UI <select id="ui"><option value="default">Default controls</option><option value="custom">Custom toolbar (headless)</option><option value="none">No controls</option></select></label>
+      <label><input type="checkbox" id="readonly" /> Read-only</label>
+      <label><input type="checkbox" id="suggest" /> Suggesting</label>
+      <button id="pages">Toggle pages</button>
+      <button id="sample">Load sample</button>
+    </header>
+
+    <div class="layout">
+      <div>
+        <div id="custom-toolbar" hidden role="toolbar" aria-label="Custom toolbar built from public state and commands"></div>
+        <div id="editor"></div>
+      </div>
+      <aside>
+        <div class="panel">
+          <h2>Features (rebuilds the editor)</h2>
+          <div class="toggles" id="features"></div>
+          <div class="row" style="margin-top:8px"><label>Character limit <input id="limit" type="number" min="0" step="100" value="0" style="width:80px" /></label></div>
+        </div>
+        <div class="panel">
+          <h2>Import / export</h2>
+          <div class="row">
+            <button data-export="html">Copy HTML</button><button data-export="markdown">Copy Markdown</button><button data-export="json">Copy JSON</button>
+          </div>
+          <div class="row"><button id="import-html">Import HTML…</button><button id="import-md">Import Markdown…</button><button id="save-version">Save version</button><select id="versions" aria-label="Restore version"><option value="">Restore version…</option></select></div>
+        </div>
+        <div class="panel">
+          <h2>Document inspector</h2>
+          <div class="row" role="tablist" aria-label="Inspector view">
+            <button role="tab" data-tab="json" aria-selected="true">JSON</button><button role="tab" data-tab="html" aria-selected="false">HTML</button><button role="tab" data-tab="markdown" aria-selected="false">Markdown</button><button role="tab" data-tab="state" aria-selected="false">State</button><button role="tab" data-tab="log" aria-selected="false">Steps</button>
+          </div>
+          <pre class="out" id="inspector" aria-live="off"></pre>
+        </div>
+        <div class="panel"><h2>Review</h2><div id="review"></div></div>
+      </aside>
+    </div>
+
+    <script type="module">
+      import * as Z from '@z-packages/zeditor';
+      import { issueRefExtension, calloutExtension, SHARED_DOCUMENT } from '../examples/shared/extensions.js';
+
+      const FEATURES = ['lists', 'code', 'tables', 'layout', 'media', 'equation', 'mentions', 'hashtag', 'emoji', 'markdownShortcuts', 'autolink', 'pages', 'comments', 'suggestions'];
+      const $ = (id) => document.getElementById(id);
+      const state = { features: Object.fromEntries(FEATURES.map((f) => [f, true])), tab: 'json', log: [] };
+      const KEY = 'zeditor-playground';
+      let z, review, comments, suggestions, versions;
+
+      const sample = () => ({
+        format: 'zeditor', version: 1,
+        blocks: [
+          { id: 'h1', type: 'heading', attrs: { level: 1 }, content: [{ text: 'zeditor playground' }] },
+          { id: 'p1', type: 'paragraph', content: [{ text: 'One engine, two interfaces. Switch between ' }, { text: 'Classic', marks: { bold: true } }, { text: ' and ' }, { text: 'Blocks', marks: { bold: true } }, { text: ' in the header: the document, caret and undo history carry over. In Blocks mode type ' }, { text: '/', marks: { code: true } }, { text: ' for commands, ' }, { text: '@', marks: { code: true } }, { text: ' to mention, ' }, { text: '#', marks: { code: true } }, { text: ' for an issue, ' }, { text: ':rocket:', marks: { code: true } }, { text: ' for emoji.' }] },
+          { id: 'l1', type: 'list', attrs: { kind: 'check', checked: true }, content: [{ text: 'Rich text, lists, tables, code, media' }] },
+          { id: 'l2', type: 'list', attrs: { kind: 'check', checked: false }, content: [{ text: 'Try drag handles, the slash menu and table tools' }], children: [{ id: 'l3', type: 'list', attrs: { kind: 'bullet' }, content: [{ text: 'Nested with Tab / Shift+Tab' }] }] },
+          { id: 'c1', type: 'code', attrs: { language: 'javascript' }, content: [{ text: 'import { createEditor } from "@z-packages/zeditor";\ncreateEditor({ element: "#editor" }); // that is all' }] },
+          { id: 't1', type: 'table', children: [
+            { id: 'r1', type: 'table_row', children: [{ id: 'k1', type: 'table_cell', attrs: { header: true }, children: [{ id: 'k1p', type: 'paragraph', content: [{ text: 'Feature' }] }] }, { id: 'k2', type: 'table_cell', attrs: { header: true }, children: [{ id: 'k2p', type: 'paragraph', content: [{ text: 'Try it' }] }] }] },
+            { id: 'r2', type: 'table_row', children: [{ id: 'k3', type: 'table_cell', children: [{ id: 'k3p', type: 'paragraph', content: [{ text: 'Paste from a spreadsheet' }] }] }, { id: 'k4', type: 'table_cell', children: [{ id: 'k4p', type: 'paragraph', content: [{ text: 'Select cells, Tab, merge' }] }] }] },
+          ] },
+          { id: 'co', type: 'callout', attrs: { tone: 'info', icon: 'ℹ️' }, children: [{ id: 'cop', type: 'paragraph', content: [{ text: 'Callouts, toggles and columns hold ordinary blocks. Click the icon to change the tone.' }] }] },
+          ...SHARED_DOCUMENT.blocks,
+          { id: 'eq', type: 'equation', attrs: { tex: 'e^{i\\pi} + 1 = 0' } },
+          { id: 'pz', type: 'paragraph', content: [{ text: 'Mixed scripts: नमस्ते दुनिया · שלום עולם · 👨‍👩‍👧‍👦 · é' }] },
+        ],
+      });
+
+      // host adapters (all local fakes here)
+      const people = ['Ada Lovelace', 'Alan Turing', 'Grace Hopper', 'Katherine Johnson', 'Linus Torvalds', 'Margaret Hamilton'];
+      const searchPeople = (q, { signal }) => new Promise((resolve, reject) => {
+        const t = setTimeout(() => resolve(people.filter((p) => p.toLowerCase().includes(q.toLowerCase())).map((p) => ({ id: p.toLowerCase().replace(/\s+/g, '.'), label: p }))), 150);
+        signal.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('aborted', 'AbortError')); });
+      });
+      const fakeUpload = (file, { signal, onProgress }) => new Promise((resolve, reject) => {
+        let p = 0;
+        const t = setInterval(() => {
+          p += 0.2; onProgress(Math.min(1, p));
+          if (p >= 1) { clearInterval(t); const r = new FileReader(); r.onload = () => resolve({ url: r.result, name: file.name }); r.readAsDataURL(file); }
+        }, 250);
+        signal.addEventListener('abort', () => { clearInterval(t); reject(new DOMException('aborted', 'AbortError')); });
+      });
+
+      function build(content) {
+        const keep = content ?? z?.getJSON() ?? JSON.parse(localStorage.getItem(KEY) ?? 'null') ?? sample();
+        review?.destroy(); comments?.destroy(); suggestions?.destroy(); z?.destroy();
+        const look = $('look').value, ui = $('ui').value, limit = +$('limit').value || undefined;
+        z = Z.createEditor({
+          element: '#editor',
+          content: keep,
+          mode: $('mode').value,
+          theme: $('theme').value,
+          unstyled: look === 'unstyled',
+          readOnly: $('readonly').checked,
+          features: state.features,
+          characterLimit: limit,
+          mentions: { search: searchPeople },
+          upload: fakeUpload,
+          extensions: [Z.codeHighlightExtension(), issueRefExtension(), calloutExtension()],
+          ui: ui === 'none' ? false : { statusBar: true, toolbar: ui === 'default' },
+          autosave: { debounce: 600, draftKey: KEY + ':draft', save: async (doc) => { await new Promise((r) => setTimeout(r, 300)); localStorage.setItem(KEY, JSON.stringify(doc)); } },
+          maxHeight: '75vh',
+        });
+        window.z = z;
+        z.element.classList.toggle('brand', look === 'brand');
+        document.body.classList.toggle('dark', $('theme').value === 'dark');
+        const user = { id: 'me', name: 'You' };
+        comments = state.features.comments ? Z.createComments(z.editor, { user }) : null;
+        suggestions = state.features.suggestions ? Z.createSuggestions(z.editor, { user }) : null;
+        $('review').textContent = '';
+        review = comments || suggestions ? Z.createReviewPanel(z.editor, $('review'), { comments: comments ?? undefined, suggestions: suggestions ?? undefined }) : null;
+        if (suggestions) suggestions.setSuggesting($('suggest').checked);
+        versions = Z.createVersions(z.editor, { store: versionStore });
+        z.editor.on('transaction', (ev) => { if (ev.docChanged) { state.log.unshift({ origin: ev.origin, steps: ev.tr.steps.map((s) => s.t === 'text' ? `text ${s.id} [${s.from},${s.to}) +${JSON.stringify(s.insert).slice(0, 60)}` : s.t === 'attrs' ? `attrs ${s.id} ${s.type ?? ''}` : `${s.t} @${s.parent}[${s.index}] ${s.t === 'insert' ? s.blocks.map((b) => b.type).join(',') : 'x' + s.count}`) }); state.log.length = Math.min(state.log.length, 30); } });
+        z.subscribe(inspect);
+        customToolbar(ui === 'custom');
+        inspect();
+      }
+      const versionStore = Z.memoryVersionStore();
+
+      // "headless" example: a toolbar rendered by the host from getState() + commands only
+      function customToolbar(on) {
+        const el = $('custom-toolbar');
+        el.hidden = !on;
+        el.textContent = '';
+        if (!on) return;
+        const btn = (label, run, pressed) => {
+          const b = document.createElement('button');
+          b.textContent = label;
+          b.onmousedown = (e) => e.preventDefault();
+          b.onclick = () => { run(); z.focus(); };
+          el.append(b);
+          return () => pressed && b.setAttribute('aria-pressed', String(!!pressed(z.getState())));
+        };
+        const updaters = [
+          btn('B', () => z.commands.toggleMark('bold'), (s) => s.marks.bold),
+          btn('I', () => z.commands.toggleMark('italic'), (s) => s.marks.italic),
+          btn('H2', () => z.commands.toggleBlockType('heading', { level: 2 }), (s) => s.blockType === 'heading' && s.blockAttrs.level === 2),
+          btn('• List', () => z.commands.toggleBlockType('list', { kind: 'bullet' }), (s) => s.blockType === 'list'),
+          btn('Undo', () => z.commands.undo()),
+          btn('Redo', () => z.commands.redo()),
+        ];
+        const info = document.createElement('span');
+        el.append(info);
+        const update = () => { updaters.forEach((u) => u()); const s = z.getState(); info.textContent = ` ${s.blockType ?? '–'} · rev ${s.revision}${s.canUndo ? ' · can undo' : ''}`; };
+        z.subscribe(update); update();
+      }
+
+      let timer;
+      function inspect() {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const e = z.editor;
+          const out = $('inspector');
+          if (state.tab === 'json') out.textContent = JSON.stringify(z.getJSON(), null, 1);
+          else if (state.tab === 'html') out.textContent = Z.toHTML(e).replace(/></g, '>\n<');
+          else if (state.tab === 'markdown') out.textContent = Z.toMarkdown(e);
+          else if (state.tab === 'state') out.textContent = JSON.stringify({ ...z.getState(), counts: Z.getCounts(e), extensions: e.extensions.map((x) => x.name), autosave: z.autosave?.status }, null, 1);
+          else out.textContent = state.log.map((l) => `[${l.origin}]\n  ` + l.steps.join('\n  ')).join('\n') || '(edit the document to see transaction steps)';
+        }, 120);
+      }
+
+      for (const f of FEATURES) {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = true;
+        cb.onchange = () => { state.features[f] = cb.checked; build(); };
+        label.append(cb, ' ' + f);
+        $('features').append(label);
+      }
+      $('mode').onchange = () => { z.setMode($('mode').value); z.focus(); };
+      $('readonly').onchange = () => z.setReadOnly($('readonly').checked);
+      $('suggest').onchange = () => suggestions?.setSuggesting($('suggest').checked);
+      for (const id of ['theme', 'look', 'ui', 'limit']) $(id).onchange = () => build();
+      $('pages').onclick = () => { if (!z.commands.enablePages?.()) z.commands.disablePages?.(); z.focus(); };
+      $('sample').onclick = () => build(sample());
+      document.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { state.tab = b.dataset.tab; document.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b))); inspect(); }));
+      document.querySelectorAll('[data-export]').forEach((b) => (b.onclick = () => {
+        const k = b.dataset.export;
+        const text = k === 'html' ? Z.toHTML(z.editor) : k === 'markdown' ? Z.toMarkdown(z.editor) : JSON.stringify(z.getJSON(), null, 2);
+        navigator.clipboard?.writeText(text); b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy ' + (k === 'json' ? 'JSON' : k === 'html' ? 'HTML' : 'Markdown')), 900);
+      }));
+      $('import-html').onclick = () => { const s = prompt('Paste HTML to import (it is sanitized):', '<h2>Imported</h2><p>Hello <b>world</b> <img src=x onerror=alert(1)></p>'); if (s != null) Z.setHTML(z.editor, s, { history: true }); };
+      $('import-md').onclick = () => { const s = prompt('Paste Markdown to import:', '## Imported\n\n- [x] done\n- [ ] todo\n\n| a | b |\n|---|---|\n| 1 | 2 |'); if (s != null) Z.setMarkdown(z.editor, s, { history: true }); };
+      $('save-version').onclick = async () => { const v = await versions.save('Version ' + new Date().toLocaleTimeString()); $('versions').append(new Option(v.label, v.id)); };
+      $('versions').onchange = async () => { const id = $('versions').value; $('versions').value = ''; if (id) await versions.restore(id); };
+
+      build();
+    </script>
+  </body>
+</html>

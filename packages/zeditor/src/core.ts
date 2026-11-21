@@ -20,7 +20,7 @@ import {
   tableExtension,
 } from './core/builtin';
 import { commentsExtension, suggestionsExtension } from './features/review';
-import { characterLimitExtension } from './features/text';
+import { characterLimitExtension, getText as getTextOf } from './features/text';
 import { blocksToHTML, htmlToBlocks, ExportOptions } from './core/html';
 import { blocksToMarkdown, markdownToBlocks } from './core/markdown';
 import { textSel } from './core/selection';
@@ -133,6 +133,32 @@ export function setMarkdown(editor: Editor, md: string, opts?: { history?: boole
   editor.setJSON(markdownToBlocks(editor.schema, md), opts);
 }
 
+/**
+ * Render a stored document to semantic, sanitized HTML without a browser — for server-side
+ * rendering, static sites, search indexing and e-mail. The same serializers produce the
+ * clipboard and export HTML, so what crawlers see is what the editor exports.
+ *
+ * `ids: true` adds `id` attributes to blocks so `#block-id` links work on the static page.
+ */
+export function renderToHTML(content: unknown, options: HeadlessOptions & ExportOptions = {}): string {
+  const editor = createHeadlessEditor({ ...options, content: content as any });
+  try {
+    return blocksToHTML(editor.schema, editor.doc.blocks, options);
+  } finally {
+    editor.destroy();
+  }
+}
+/** Plain text of a stored document (meta descriptions, search indexes, notifications). */
+export function renderToText(content: unknown, options: HeadlessOptions = {}): string {
+  const editor = createHeadlessEditor({ ...options, content: content as any });
+  try {
+    return getTextOf(editor);
+  } finally {
+    editor.destroy();
+  }
+}
+
+export { copyPayload, cutPayload, pasteData, insertContent, insertInlineContent, parseTSV, tableToMatrix } from './core/clipboard';
 export { Editor, Transaction, setIdGenerator } from './core/editor';
 export type { EditorOptions, EditorMode, EditorEvents, TransactionEvent, UpdateOptions, CommandFn, Commands, HistoryProvider } from './core/editor';
 export * from './core/model';
@@ -181,6 +207,8 @@ export {
   pageOf,
   emptyId,
   v as validators,
+  FONT_FAMILIES,
+  FONT_SIZES,
   EMOJI,
   URL_RE,
 } from './core/builtin';
@@ -188,8 +216,8 @@ export type { EmbedProvider } from './core/builtin';
 export { parseHTML, htmlToBlocks, blocksToHTML, inlineToHTML, extractEmbeddedJSON, esc as escapeHTML, decodeEntities } from './core/html';
 export type { HTMLContext, ExportOptions } from './core/html';
 export { blocksToMarkdown, markdownToBlocks, inlineToMarkdown, parseInlineMarkdown } from './core/markdown';
-export { getText, blockText, getCounts, graphemeCount, findAll, replaceMatch, replaceAll, characterLimitExtension } from './features/text';
-export type { Counts, FindOptions, Match } from './features/text';
+export { getText, blockText, getCounts, getHeadings, graphemeCount, findAll, replaceMatch, replaceAll, characterLimitExtension } from './features/text';
+export type { Counts, FindOptions, Match, HeadingEntry } from './features/text';
 export { commentsExtension, suggestionsExtension, createComments, createSuggestions, createVersions, memoryCommentStore, memoryVersionStore } from './features/review';
 export type {
   ReviewUser,

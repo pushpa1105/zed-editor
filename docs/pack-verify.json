@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-21T16:18:50.682Z",
+  "tarball": "z-packages-zeditor-0.1.0.tgz",
+  "checks": [
+    {
+      "name": "tarball contents",
+      "ok": true,
+      "ms": 0,
+      "detail": "56 files"
+    },
+    {
+      "name": "vanilla: install only the tarball",
+      "ok": true,
+      "ms": 3966,
+      "detail": "node_modules: @z-packages"
+    },
+    {
+      "name": "vanilla: no-build HTML example runs from node_modules in Chromium",
+      "ok": true,
+      "ms": 897,
+      "detail": "mounted, typed, switched mode, saved and reloaded JSON, CSS applied, no console errors"
+    },
+    {
+      "name": "node: headless ESM import, transform, validate, serialize",
+      "ok": true,
+      "ms": 118,
+      "detail": "ok heading,list,table"
+    },
+    {
+      "name": "node: SSR-safe import of the DOM entry (no window access at import time)",
+      "ok": true,
+      "ms": 107,
+      "detail": "ok"
+    },
+    {
+      "name": "types: install tarball with peers",
+      "ok": true,
+      "ms": 12799,
+      "detail": "installed"
+    },
+    {
+      "name": "types: a strict TypeScript project type-checks every public entry point",
+      "ok": true,
+      "ms": 3317,
+      "detail": "tsc --strict passed (skipLibCheck off)"
+    },
+    {
+      "name": "node: SSR-safe import of the React and Vue adapters; React renders on the server",
+      "ok": true,
+      "ms": 250,
+      "detail": "ok <div class=\"host\"></div>"
+    },
+    {
+      "name": "react: example builds against the tarball",
+      "ok": true,
+      "ms": 20957,
+      "detail": "built: index-CFa0aDjY.css, index-dN1tcBvb.js"
+    },
+    {
+      "name": "vue-vuetify: example builds against the tarball",
+      "ok": true,
+      "ms": 28133,
+      "detail": "built: index-DGuPOLOK.css, index-DOycPP7b.js"
+    }
+  ],
+  "files": 56,
+  "unpackedKB": 3517,
+  "packedKB": 901,
+  "ok": true
+}

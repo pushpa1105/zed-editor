@@ -300,7 +300,16 @@ export function createBlockHandles(editor: Editor, host: HTMLElement, opts: Bloc
     if (!view.root.contains(t)) return;
     target(view.blockIdAt(t));
   };
+  let frame: any = 0;
+  /** positioning reads layout: at most once per frame */
   const onSelection = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      followSelection();
+    });
+  };
+  const followSelection = () => {
     if (!enabled()) {
       box.hidden = true;
       return;
@@ -478,6 +487,7 @@ export function createBlockHandles(editor: Editor, host: HTMLElement, opts: Bloc
   return {
     destroy() {
       closeMenu();
+      if (frame) cancelAnimationFrame(frame);
       document.removeEventListener('mousemove', onMove);
       window.removeEventListener('scroll', position, true);
       window.removeEventListener('resize', position);

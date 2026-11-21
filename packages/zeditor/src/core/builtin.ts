@@ -99,6 +99,9 @@ const boldWeight = (el: HtmlEl) => {
   return w === 'bold' || w === 'bolder' || parseInt(w, 10) >= 600;
 };
 
+export const FONT_FAMILIES = ['serif', 'sans-serif', 'monospace', 'cursive'] as const;
+export const FONT_SIZES = ['12px', '14px', '16px', '18px', '24px', '32px'] as const;
+
 const marks: MarkSpec[] = [
   {
     type: 'link',
@@ -163,6 +166,23 @@ const marks: MarkSpec[] = [
     toMarkdown: () => ['<mark>', '</mark>'],
   },
   simpleMark('code', 'code', ['`', '`'], [{ tag: 'code' }, { tag: 'kbd' }, { tag: 'tt' }, { tag: 'samp' }], 40),
+  {
+    // only re-imported from our own export: pasted documents set a size on every span
+    type: 'fontSize',
+    rank: 32,
+    attrs: { size: { validate: (x) => (typeof x === 'string' && /^\d{1,3}(\.\d)?(px|pt|em|rem|%)$/.test(x) ? x : undefined) } },
+    parseHTML: [{ tag: 'span', match: (el) => !!el.attrs['data-font-size'], getAttrs: (el) => ({ size: el.attrs['data-font-size'] }), priority: 60 }],
+    toHTML: (x) => [`<span data-font-size="${esc(x.size)}" style="font-size:${esc(x.size)}">`, '</span>'],
+    toMarkdown: () => ['', ''],
+  },
+  {
+    type: 'fontFamily',
+    rank: 33,
+    attrs: { family: { validate: v.enumOf(...FONT_FAMILIES) } },
+    parseHTML: [{ tag: 'span', match: (el) => !!el.attrs['data-font-family'], getAttrs: (el) => ({ family: el.attrs['data-font-family'] }), priority: 60 }],
+    toHTML: (x) => [`<span data-font-family="${esc(x.family)}" style="font-family:${esc(x.family)}">`, '</span>'],
+    toMarkdown: () => ['', ''],
+  },
 ];
 
 function linkPrompt(editor: Editor): boolean {
@@ -232,6 +252,16 @@ export const baseExtension: Extension = {
   marks,
   commands: {
     ...coreCommands,
+    /** Remove all content (one undoable edit), leaving a single empty paragraph. */
+    clearDocument: (editor) => {
+      if (editor.readOnly) return false;
+      const para = editor.schema.create('paragraph');
+      return editor.update((tr) => {
+        tr.removeAt('root', 0, editor.doc.blocks.length);
+        tr.insert('root', 0, [para]);
+        tr.select(textSel(para.id, 0));
+      });
+    },
     /** Escape in block mode: turn a text selection into a block selection. */
     selectCurrentBlock: (editor) => {
       const b = focusBlock(editor);
@@ -328,6 +358,26 @@ export const baseExtension: Extension = {
     { id: 'link', group: 'marks', label: 'link', icon: 'link', run: (e) => void linkPrompt(e), active: (e) => isMarkActive(e, 'link') || markValue(e, 'link') !== undefined, shortcut: 'Mod-k', floating: true, order: 25 },
     markButton('sub', 'sub', 'Mod-,', 26, false),
     markButton('sup', 'sup', 'Mod-.', 27, false),
+    {
+      id: 'fontSize',
+      group: 'font',
+      label: 'fontSize',
+      type: 'select',
+      options: [{ value: '', label: 'font.default' }, ...FONT_SIZES.map((s) => ({ value: s, label: s }))],
+      value: (e) => markValue(e, 'fontSize')?.size ?? '',
+      run: (e, size: string) => void (size ? e.exec('setMark', 'fontSize', { size }) : e.exec('unsetMark', 'fontSize')),
+      order: 28,
+    },
+    {
+      id: 'fontFamily',
+      group: 'font',
+      label: 'fontFamily',
+      type: 'select',
+      options: [{ value: '', label: 'font.default' }, ...FONT_FAMILIES.map((s) => ({ value: s, label: s }))],
+      value: (e) => markValue(e, 'fontFamily')?.family ?? '',
+      run: (e, family: string) => void (family ? e.exec('setMark', 'fontFamily', { family }) : e.exec('unsetMark', 'fontFamily')),
+      order: 29,
+    },
     { id: 'color', group: 'color', label: 'textColor', icon: 'color', type: 'color', value: (e) => markValue(e, 'color')?.color ?? '', run: (e, c: string) => void (c ? e.exec('setMark', 'color', { color: c }) : e.exec('unsetMark', 'color')), order: 30 },
     { id: 'highlight', group: 'color', label: 'highlight', icon: 'highlight', type: 'color', value: (e) => markValue(e, 'highlight')?.color ?? '', run: (e, c: string) => void (c ? e.exec('setMark', 'highlight', { color: c }) : e.exec('unsetMark', 'highlight')), floating: true, order: 31 },
     ...(['left', 'center', 'right', 'justify'] as const).map(
@@ -389,6 +439,9 @@ export const baseExtension: Extension = {
     'link.remove': 'Remove link',
     'link.open': 'Open link',
     textColor: 'Text color',
+    fontSize: 'Font size',
+    fontFamily: 'Font family',
+    'font.default': 'Default',
     highlight: 'Highlight',
     'color.none': 'Default',
     'align.left': 'Align left',
@@ -1479,6 +1532,7 @@ void newId;
 declare module './editor' {
   interface Commands {
     selectCurrentBlock(): boolean;
+    clearDocument(): boolean;
     insertColumns(count?: number): boolean;
     toggleOpen(id?: string): boolean;
     insertImage(attrs: Attrs): boolean;

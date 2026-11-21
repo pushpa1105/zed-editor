@@ -53,6 +53,16 @@ export const markRenderers: Record<string, MarkRenderer> = {
   comment: (v) => h('span', { class: 'z-comment', 'data-comment': (v?.ids ?? []).join(' ') }),
   suggestion: (v) => h(v?.kind === 'delete' ? 'del' : 'ins', { class: 'z-suggestion z-suggestion-' + (v?.kind ?? 'insert'), 'data-suggestion': v?.id, title: v?.author || null }),
   hashtag: () => h('span', { class: 'z-hashtag' }),
+  fontSize: (v) => {
+    const el = h('span');
+    el.style.fontSize = String(v?.size ?? '');
+    return el;
+  },
+  fontFamily: (v) => {
+    const el = h('span');
+    el.style.fontFamily = String(v?.family ?? '');
+    return el;
+  },
 };
 
 /* ------------------------------------------------------------------ inline atoms */

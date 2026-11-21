@@ -4,11 +4,13 @@
   "packageManager": "pnpm@10.16.1",
   "scripts": {
     "build": "pnpm --filter @z-packages/zeditor build",
+    "build:examples": "pnpm --filter zeditor-example-react build && pnpm --filter zeditor-example-vue-vuetify build",
+    "typecheck": "pnpm --filter @z-packages/zeditor typecheck && pnpm --filter zeditor-example-react typecheck",
     "test": "pnpm --filter @z-packages/zeditor test",
-    "typecheck": "pnpm --filter @z-packages/zeditor typecheck",
-    "test:browser": "pnpm --filter @z-packages/zeditor test:browser",
+    "test:browser": "pnpm build:examples && pnpm --filter @z-packages/zeditor test:browser",
     "playground": "node scripts/serve.mjs",
+    "bench": "node scripts/bench.mjs",
     "pack:verify": "node scripts/pack-verify.mjs",
-    "bench": "node scripts/bench.mjs"
+    "check": "pnpm build && pnpm typecheck && pnpm test && pnpm test:browser && pnpm pack:verify"
   }
 }

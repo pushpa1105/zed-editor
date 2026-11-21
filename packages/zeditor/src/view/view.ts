@@ -63,6 +63,9 @@ export interface HighlightRange {
 }
 export type HighlightSource = () => Record<string, HighlightRange[]>;
 
+/** number of blocks above which off-screen rendering is skipped (content-visibility) */
+const LARGE_DOC = 400;
+
 const HAS_HIGHLIGHTS = typeof CSS !== 'undefined' && !!(CSS as any).highlights && typeof (globalThis as any).Highlight === 'function';
 
 export class EditorView {
@@ -88,6 +91,8 @@ export class EditorView {
   private destroyed = false;
   private suppressSelection = 0;
   private escapeArmed = false;
+  private large = false;
+  private scrollTimer: any = 0;
 
   constructor(
     readonly editor: Editor,
@@ -357,12 +362,24 @@ export class EditorView {
     this.applyPages();
     this.updateSelectionClasses();
     if (!this.composing || tr.meta.origin === 'history') this.syncSelectionToDOM(tr.meta.focus === true);
-    if (tr.scrollIntoView) this.scrollToSelection();
+    if (tr.scrollIntoView && !this.scrollTimer) {
+      const run = () => {
+        this.scrollTimer = 0;
+        if (!this.destroyed) this.scrollToSelection();
+      };
+      this.scrollTimer = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(run) : setTimeout(run, 0);
+    }
     this.scheduleHighlights();
   };
 
   private updateEmpty(): void {
     this.root.classList.toggle('z-empty', this.editor.isEmpty);
+    // large documents: let the browser skip layout and paint of off-screen blocks
+    const large = this.editor.doc.size > LARGE_DOC;
+    if (large !== this.large) {
+      this.large = large;
+      this.root.classList.toggle('z-large', large);
+    }
   }
 
   /** Show only the active page in 'tabs' mode; show all pages as sheets in 'paged' mode. */
@@ -470,7 +487,13 @@ export class EditorView {
   private scrollToSelection(): void {
     const sel = this.editor.selection;
     if (!sel || !this.hasFocus()) return;
-    const rect = sel.type === 'text' ? this.coordsAt(sel.focus) : this.domOf(sel.type === 'block' ? sel.ids[sel.ids.length - 1] : sel.focus)?.getBoundingClientRect();
+    const blockDom = this.domOf(sel.type === 'text' ? sel.focus.id : sel.type === 'block' ? sel.ids[sel.ids.length - 1] : sel.focus);
+    let rect = sel.type === 'text' ? this.coordsAt(sel.focus) : blockDom?.getBoundingClientRect();
+    if (blockDom && (!rect || (!rect.height && !rect.width))) {
+      // the block is not rendered yet (off-screen in a large document): bring it in first
+      blockDom.scrollIntoView({ block: 'center' });
+      rect = sel.type === 'text' ? this.coordsAt(sel.focus) : blockDom.getBoundingClientRect();
+    }
     if (!rect) return;
     // find the scroll container
     let sc: HTMLElement | null = this.root;
@@ -580,10 +603,17 @@ export class EditorView {
   }
 
   private updateSelectionClasses(): void {
-    for (const el of this.selected) el.classList.remove('z-selected', 'z-cell-selected');
+    for (const el of this.selected) el.classList.remove('z-selected', 'z-cell-selected', 'z-caret-block');
     this.selected = [];
     const sel = this.editor.selection;
     this.root.classList.toggle('z-hide-caret', !!sel && sel.type !== 'text');
+    if (sel && sel.type === 'text' && isCollapsed(sel)) {
+      const dom = this.domOf(sel.focus.id);
+      if (dom) {
+        dom.classList.add('z-caret-block');
+        this.selected.push(dom);
+      }
+    }
     if (!sel || sel.type === 'text') return;
     if (sel.type === 'block') {
       for (const id of sel.ids) {

@@ -345,6 +345,31 @@ describe('pages', () => {
   });
 });
 
+describe('small helpers', () => {
+  it('table of contents, clear, font marks, static rendering', async () => {
+    const { getHeadings, renderToHTML, renderToText } = await import('../../src/core');
+    const e = make([{ id: 'h', type: 'heading', attrs: { level: 2 }, content: [{ text: 'Intro' }] }, p('body text', 'a'), { id: 'h2', type: 'heading', attrs: { level: 3 }, content: [{ text: 'Details' }] }]);
+    expect(getHeadings(e)).toEqual([{ id: 'h', level: 2, text: 'Intro' }, { id: 'h2', level: 3, text: 'Details' }]);
+    caret(e, 'a', 0, 'a', 4);
+    expect(e.commands.setMark('fontSize', { size: '24px' })).toBe(true);
+    expect(e.commands.setMark('fontSize', { size: 'expression(1)' })).toBe(false);
+    expect(e.commands.setMark('fontFamily', { family: 'monospace' })).toBe(true);
+    const html = toHTML(e);
+    expect(html).toContain('font-size:24px');
+    expect(make(fromHTML(e, html)).getJSON().blocks[1].content![0].marks).toEqual({ fontSize: { size: '24px' }, fontFamily: { family: 'monospace' } });
+    // server-side rendering for SEO: semantic HTML with block ids, no DOM needed
+    const stat = renderToHTML(e.getJSON(), { ids: true });
+    expect(stat).toContain('<h2 id="h">Intro</h2>');
+    expect(stat).toContain('<h3 id="h2">Details</h3>');
+    expect(renderToText(e.getJSON())).toBe('Intro\nbody text\nDetails');
+    expect(renderToHTML({ blocks: [{ id: 'x', type: 'paragraph', content: [{ text: '<script>alert(1)</script>', marks: { link: { href: 'javascript:alert(1)' } } }] }] })).toBe('<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>');
+    e.commands.clearDocument();
+    expect(e.isEmpty).toBe(true);
+    e.undo();
+    expect(getHeadings(e).length).toBe(2);
+  });
+});
+
 describe('extensions', () => {
   it('orders by dependency, reports conflicts and missing dependencies, and cleans up', () => {
     const order: string[] = [];

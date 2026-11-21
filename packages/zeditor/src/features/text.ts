@@ -44,6 +44,18 @@ export function graphemeCount(s: string): number {
   return [...s].length;
 }
 
+export interface HeadingEntry {
+  id: string;
+  level: number;
+  text: string;
+}
+/** Headings in document order: the data for a table of contents (link to `#id` / `revealBlock`). */
+export function getHeadings(editor: Editor): HeadingEntry[] {
+  const out: HeadingEntry[] = [];
+  for (const b of editor.doc.descendants()) if (b.type === 'heading') out.push({ id: b.id, level: b.attrs.level ?? 1, text: blockText(editor, b) });
+  return out;
+}
+
 export interface Counts {
   characters: number;
   charactersNoSpaces: number;

@@ -172,6 +172,8 @@ export function createEditor(options: CreateEditorOptions): ZEditor {
 
   const theme = options.theme ?? 'light';
   const wrapper = h('div', { class: 'zeditor' + (options.unstyled ? '' : ' z-theme'), 'data-mode': editor.mode, 'data-theme': theme });
+  // hint shown on the empty paragraph that holds the caret in block mode
+  wrapper.style.setProperty('--z-block-placeholder', JSON.stringify(editor.label('placeholder.block')));
   const top = h('div', { class: 'z-top' });
   const scroll = h('div', { class: 'z-scroll' });
   if (options.maxHeight) scroll.style.maxHeight = options.maxHeight;
@@ -277,5 +279,5 @@ export type { ToolbarOptions, UIHandle } from './ui/toolbar';
 export { createTypeahead, createBlockHandles } from './ui/menus';
 export { createFindPanel, createStatusBar, createPageTabs, createTableTools, createMediaUI, createReviewPanel, revealBlock } from './ui/panels';
 export { icon, setIcons } from './ui/icons';
-export { copyPayload, cutPayload, pasteData, insertContent, insertInlineContent, parseTSV, tableToMatrix, MIME as CLIPBOARD_MIME } from './core/clipboard';
+export { MIME as CLIPBOARD_MIME } from './core/clipboard';
 void setIcons;
