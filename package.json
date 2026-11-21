@@ -1,0 +1,14 @@
+{
+  "name": "zeditor-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.16.1",
+  "scripts": {
+    "build": "pnpm --filter @z-packages/zeditor build",
+    "test": "pnpm --filter @z-packages/zeditor test",
+    "typecheck": "pnpm --filter @z-packages/zeditor typecheck",
+    "test:browser": "pnpm --filter @z-packages/zeditor test:browser",
+    "playground": "node scripts/serve.mjs",
+    "pack:verify": "node scripts/pack-verify.mjs",
+    "bench": "node scripts/bench.mjs"
+  }
+}
