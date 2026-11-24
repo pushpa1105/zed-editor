@@ -4,7 +4,7 @@
 import type { Editor } from '../core/editor';
 import { textSel } from '../core/selection';
 import { tableContext, tableMap } from '../core/table';
-import { activePage, getPages, emptyId } from '../core/builtin';
+import { activePage, getPages, emptyId, pagePath, pageTree, parentPage } from '../core/builtin';
 import { safeUrl } from '../core/schema';
 import { findAll, replaceAll, replaceMatch, getCounts, Match, FindOptions } from '../features/text';
 import type { Uploads } from '../features/persist';
@@ -188,7 +188,8 @@ export function createPageTabs(editor: Editor, host: HTMLElement): Disposable {
   const addBtn = h('button', { type: 'button', class: 'z-btn z-page-add', 'aria-label': editor.label('pages.add'), title: editor.label('pages.add'), html: icon('plus') });
   const viewBtn = h('button', { type: 'button', class: 'z-btn z-page-view', 'aria-pressed': 'false' });
   const info = h('span', { class: 'z-page-info', role: 'status' });
-  const bar = h('div', { class: 'z-pages-bar', 'data-z-ignore': '' }, list, addBtn, h('span', { class: 'z-spacer' }), info, viewBtn);
+  const crumbs = h('nav', { class: 'z-breadcrumbs', 'aria-label': editor.label('pages.breadcrumbs'), hidden: true });
+  const bar = h('div', { class: 'z-pages-bar', 'data-z-ignore': '' }, h('div', { class: 'z-pages-row' }, list, addBtn, h('span', { class: 'z-spacer' }), info, viewBtn), crumbs);
   host.append(bar);
   let renaming: string | null = null;
   let sig = '';
@@ -213,6 +214,8 @@ export function createPageTabs(editor: Editor, host: HTMLElement): Disposable {
       'div',
       { class: 'z-menu', role: 'menu', 'data-z-ignore': '' },
       item(editor.label('pages.rename'), () => rename(id)),
+      item(editor.label('pages.addSub'), () => editor.exec('addSubPage', id)),
+      item(editor.label('pages.toTop'), () => editor.exec('setPageParent', id, null), !parentPage(editor, pages[idx])),
       item(editor.label('pages.duplicate'), () => editor.exec('duplicatePage', id)),
       item(editor.label('pages.moveLeft'), () => editor.exec('movePage', id, idx - 1), idx === 0),
       item(editor.label('pages.moveRight'), () => editor.exec('movePage', id, idx + 1), idx === pages.length - 1),
@@ -239,7 +242,23 @@ export function createPageTabs(editor: Editor, host: HTMLElement): Disposable {
     addBtn.disabled = editor.readOnly;
     const idx = active ? pages.indexOf(active) : -1;
     info.textContent = pages.length ? editor.label('pages.count').replace('{n}', String(idx + 1)).replace('{total}', String(pages.length)) : '';
-    const next = pages.map((p) => p.id + ':' + p.attrs.title).join('|') + '#' + active?.id + '#' + renaming + '#' + editor.readOnly;
+    // breadcrumbs for sub-pages: Parent / Child
+    const path = active ? pagePath(editor, active.id) : [];
+    crumbs.hidden = path.length < 2;
+    const crumbSig = path.map((p) => p.id + p.attrs.title).join('/');
+    if (crumbs.dataset.sig !== crumbSig) {
+      crumbs.dataset.sig = crumbSig;
+      crumbs.textContent = '';
+      path.forEach((p, i) => {
+        if (i) crumbs.append(h('span', { class: 'z-crumb-sep', 'aria-hidden': 'true' }, '/'));
+        const last = i === path.length - 1;
+        const b = h('button', { type: 'button', class: 'z-crumb', 'aria-current': last ? 'page' : null }, p.attrs.title || editor.label('pages.untitled'));
+        b.addEventListener('click', () => editor.exec('setActivePage', p.id));
+        crumbs.append(b);
+      });
+    }
+    const depths = new Map(pageTree(editor).map((x) => [x.page.id, x.depth]));
+    const next = pages.map((p) => p.id + ':' + p.attrs.title + ':' + (p.attrs.parent ?? '')).join('|') + '#' + active?.id + '#' + renaming + '#' + editor.readOnly;
     if (next === sig && !force) return;
     sig = next;
     const hadFocus = list.contains(document.activeElement) && (document.activeElement as HTMLElement).tagName !== 'INPUT';
@@ -264,7 +283,7 @@ export function createPageTabs(editor: Editor, host: HTMLElement): Disposable {
         list.append(input);
         return;
       }
-      const tab = h('button', { type: 'button', class: 'z-page-tab', role: 'tab', id: 'z-tab-' + p.id, 'aria-selected': String(selected), tabindex: selected ? '0' : '-1', 'data-page': p.id, title }, h('span', { class: 'z-page-num' }, String(i + 1)), h('span', { class: 'z-page-title' }, title));
+      const tab = h('button', { type: 'button', class: 'z-page-tab', role: 'tab', id: 'z-tab-' + p.id, 'aria-selected': String(selected), tabindex: selected ? '0' : '-1', 'data-page': p.id, 'data-depth': String(depths.get(p.id) ?? 0), title }, (depths.get(p.id) ?? 0) > 0 ? h('span', { class: 'z-page-sub', 'aria-hidden': 'true' }, '↳') : h('span', { class: 'z-page-num' }, String(i + 1)), h('span', { class: 'z-page-title' }, title));
       tab.addEventListener('click', () => editor.exec('setActivePage', p.id));
       tab.addEventListener('dblclick', () => rename(p.id));
       tab.addEventListener('contextmenu', (e) => {

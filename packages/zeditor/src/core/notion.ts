@@ -86,6 +86,15 @@ export const notionExtension: Extension = {
       toText: (b) => b.attrs?.label ?? '',
     },
     {
+      // a live, read-only mirror of another block of the same document
+      type: 'synced',
+      kind: 'atom',
+      attrs: { source: { default: '', validate: (x) => (typeof x === 'string' && /^[\w:.-]{1,64}$/.test(x) ? x : undefined) } },
+      parseHTML: [{ tag: 'div', match: (el) => !!el.attrs['data-synced'], getAttrs: (el) => ({ source: el.attrs['data-synced'] }), priority: 75 }],
+      toHTML: (b, c) => `<div${c.id(b)} data-synced="${esc(b.attrs?.source ?? '')}"></div>`,
+      toText: () => '',
+    },
+    {
       type: 'page_link',
       kind: 'inline',
       attrs: { page: { default: '', validate: (x) => (typeof x === 'string' && /^[\w:.-]{1,64}$/.test(x) ? x : undefined) }, title: { default: '', validate: v.str(200) } },
@@ -144,6 +153,17 @@ export const notionExtension: Extension = {
       if (!page || page.type !== 'page') return false;
       return editor.exec('insertInline', { atom: 'page_link', attrs: { page: pageId, title: page.attrs.title ?? '' } }, { trailingSpace: true });
     },
+    /** Insert a live, read-only mirror of a block (default: the block holding the selection) below it. */
+    insertSyncedCopy: (editor, sourceId?: string, at?: { after?: string }) => {
+      if (editor.readOnly) return false;
+      const source = sourceId ? editor.doc.get(sourceId) : selectedBlocks(editor)[0];
+      if (!source || source === editor.doc.root || ['synced', 'page', 'db_row', 'table_row', 'table_cell', 'column'].includes(source.type)) return false;
+      const copy = editor.schema.create('synced', { source: source.id });
+      return editor.update((tr) => {
+        tr.insertAfter(at?.after && editor.doc.get(at.after) ? at.after : source.id, [copy]);
+        tr.select(blockSel([copy.id]));
+      });
+    },
     /** Create a button that inserts copies of the given (or selected) blocks when pressed. */
     saveAsTemplate: (editor, ids?: string[], label?: string) => {
       if (editor.readOnly) return false;
@@ -195,9 +215,16 @@ export const notionExtension: Extension = {
     { id: 'template', title: 'Template button', description: 'Button that inserts saved blocks', keywords: ['template', 'button', 'reuse', 'snippet'], icon: 'copy', group: 'advanced', order: 63, run: (e, { blockId }) => void e.exec('insertBlocks', [e.schema.create('template_button', { label: 'New to-do', blocks: [e.schema.create('list', { kind: 'check', checked: false }, 'To-do')] })], { replace: emptyId(e, blockId), after: blockId }) },
     ...[1, 2, 3].map((level) => ({ id: 'toggle-h' + level, title: 'Toggle heading ' + level, description: 'Collapsible heading', keywords: ['toggle', 'heading', 'collapse', 'h' + level], icon: 'toggle', group: 'advanced', order: 63 + level, run: (e: Editor, { blockId }: { blockId: string }) => void e.exec('setToggleLevel', level, blockId) })),
   ],
-  blockActions: [{ id: 'saveTemplate', label: 'action.saveTemplate', icon: 'copy', run: (e, ids) => void e.exec('saveAsTemplate', ids) }],
+  blockActions: [
+    { id: 'syncedCopy', label: 'action.syncedCopy', icon: 'sync', run: (e, ids) => void e.exec('insertSyncedCopy', ids[0]) },
+    { id: 'saveTemplate', label: 'action.saveTemplate', icon: 'copy', run: (e, ids) => void e.exec('saveAsTemplate', ids) },
+  ],
   labels: {
     'action.saveTemplate': 'Save as template button',
+    'action.syncedCopy': 'Create synced copy',
+    'synced.label': 'Synced copy',
+    'synced.goto': 'Go to original',
+    'synced.missing': 'The original block was deleted',
     'toc.title': 'Table of contents',
     'toc.empty': 'Add headings to build an outline',
     'bookmark.prompt': 'Paste a link to bookmark',
@@ -221,6 +248,7 @@ export function tocEntries(editor: Editor, tocId: string) {
 declare module './editor' {
   interface Commands {
     insertToc(): boolean;
+    insertSyncedCopy(sourceId?: string, at?: { after?: string }): boolean;
     insertBookmark(url: string, at?: { replace?: string; after?: string }): boolean;
     insertDate(date?: string): boolean;
     insertPageLink(pageId: string): boolean;

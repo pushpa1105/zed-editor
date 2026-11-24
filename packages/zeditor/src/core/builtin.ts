@@ -1282,7 +1282,7 @@ const pageNodes: NodeSpec[] = [
     kind: 'container',
     isolating: true,
     parents: ['doc'],
-    attrs: { title: { default: '', validate: v.str(200) } },
+    attrs: { title: { default: '', validate: v.str(200) }, parent: { validate: (x: any) => (typeof x === 'string' && /^[\w:.-]{1,64}$/.test(x) ? x : undefined) } },
     parseHTML: [{ tag: 'section', match: (el) => el.attrs['data-page'] !== undefined, getAttrs: (el) => ({ title: el.attrs['data-title'] ?? el.attrs['data-page'] ?? '' }), priority: 70 }],
     toHTML: (b, c) => `<section${c.id(b)} data-page="" data-title="${esc(b.attrs?.title ?? '')}">${c.children(b)}</section>`,
     toMarkdown: (b, c) => `<!-- page: ${String(b.attrs?.title ?? '').replace(/--/g, '—')} -->\n\n${c.children(b)}`,
@@ -1318,6 +1318,36 @@ function setActive(editor: Editor, id: string | null): void {
   st.active = id;
   editor.emit('page', { id });
   editor.emit('update');
+}
+/** Parent page of a sub-page (null for top-level pages or when the parent no longer exists). */
+export function parentPage(editor: Editor, page: Block): Block | null {
+  const p = page.attrs.parent ? editor.doc.get(page.attrs.parent) : null;
+  return p && p.type === 'page' && p !== page ? p : null;
+}
+/** Ancestors of a page from the top level down, ending with the page itself (breadcrumbs). */
+export function pagePath(editor: Editor, id: string): Block[] {
+  const out: Block[] = [];
+  let cur = editor.doc.get(id) ?? null;
+  for (let guard = 0; cur && cur.type === 'page' && guard < 32 && !out.includes(cur); guard++) {
+    out.unshift(cur);
+    cur = parentPage(editor, cur);
+  }
+  return out;
+}
+export const pageDepth = (editor: Editor, page: Block): number => pagePath(editor, page.id).length - 1;
+/** Pages in tree order (each page followed by its sub-pages) with their depth. */
+export function pageTree(editor: Editor): { page: Block; depth: number }[] {
+  const pages = getPages(editor);
+  const out: { page: Block; depth: number }[] = [];
+  const walk = (parent: Block | null, depth: number) => {
+    for (const p of pages) if (parentPage(editor, p) === parent && !out.some((o) => o.page === p)) {
+      out.push({ page: p, depth });
+      if (depth < 32) walk(p, depth + 1);
+    }
+  };
+  walk(null, 0);
+  for (const p of pages) if (!out.some((o) => o.page === p)) out.push({ page: p, depth: 0 }); // cycles in hostile data
+  return out;
 }
 function nextTitle(editor: Editor): string {
   const used = new Set(getPages(editor).map((p) => p.attrs.title));
@@ -1375,12 +1405,44 @@ export const pagesExtension: Extension = {
       const idx = pages.indexOf(page);
       const next = pages[idx + 1] ?? pages[idx - 1];
       const ok = editor.update((tr) => {
+        // sub-pages of a removed page move up one level
+        for (const p of pages) if (p.attrs.parent === page.id) tr.setAttrs(p.id, { parent: page.attrs.parent });
         tr.remove(page.id);
         const t = firstTextBlock(editor.doc, editor.schema, next);
         if (t) tr.select(textSel(t.id, 0));
       });
       if (ok) setActive(editor, next.id);
       return ok;
+    },
+    /** Add a page nested under another page (default: the active one). */
+    addSubPage: (editor, parentId?: string, title?: string) => {
+      if (editor.readOnly) return false;
+      if (!getPages(editor).length && !editor.exec('enablePages')) return false;
+      const parent = (parentId && editor.doc.get(parentId)) || activePage(editor);
+      if (!parent || parent.type !== 'page') return false;
+      // placed after the parent's last descendant so document order follows the tree
+      const tree = pageTree(editor);
+      const at = tree.findIndex((x) => x.page === parent);
+      let last = parent;
+      for (let i = at + 1; i < tree.length && tree[i].depth > tree[at].depth; i++) last = tree[i].page;
+      const page = editor.schema.create('page', { title: title ?? nextTitle(editor), parent: parent.id });
+      const ok = editor.update((tr) => {
+        tr.insert('root', last.index + 1, [page]);
+        const t = firstTextBlock(editor.doc, editor.schema, editor.doc.get(page.id)!);
+        if (t) tr.select(textSel(t.id, 0));
+      });
+      if (ok) setActive(editor, page.id);
+      return ok;
+    },
+    /** Nest a page under another one, or make it top-level with `null`. Cycles are refused. */
+    setPageParent: (editor, id: string, parentId: string | null) => {
+      const page = editor.doc.get(id);
+      if (editor.readOnly || !page || page.type !== 'page') return false;
+      if (parentId) {
+        const parent = editor.doc.get(parentId);
+        if (!parent || parent.type !== 'page' || pagePath(editor, parentId).some((p) => p.id === id)) return false;
+      }
+      return editor.update((tr) => void tr.setAttrs(id, { parent: parentId ?? undefined }));
     },
     renamePage: (editor, id: string, title: string) => {
       const page = editor.doc.get(id);
@@ -1494,6 +1556,9 @@ export const pagesExtension: Extension = {
     'pages.view.tabs': 'One page at a time',
     'pages.view.paged': 'All pages',
     'pages.count': 'Page {n} of {total}',
+    'pages.addSub': 'Add sub-page',
+    'pages.toTop': 'Move to top level',
+    'pages.breadcrumbs': 'Page path',
   },
   // a paged document holds only pages at the top level
   normalize: (tr) => {
@@ -1553,6 +1618,8 @@ declare module './editor' {
     addPage(title?: string, afterId?: string): boolean;
     removePage(id?: string): boolean;
     renamePage(id: string, title: string): boolean;
+    addSubPage(parentId?: string, title?: string): boolean;
+    setPageParent(id: string, parentId: string | null): boolean;
     movePage(id: string, index: number): boolean;
     duplicatePage(id?: string): boolean;
     setActivePage(id: string): boolean;

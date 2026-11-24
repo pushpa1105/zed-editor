@@ -168,6 +168,10 @@ export function renderToText(content: unknown, options: HeadlessOptions = {}): s
 }
 
 export { copyPayload, cutPayload, pasteData, insertContent, insertInlineContent, parseTSV, tableToMatrix } from './core/clipboard';
+export { parseFormula, runFormula, checkFormula, FORMULA_FUNCTIONS } from './core/formula';
+export type { FormulaValue } from './core/formula';
+export { registerDbPropertyType, dbTypeSpec, dbContext, relatedRows } from './core/database';
+export type { DbTypeSpec, DbContext } from './core/database';
 export { databaseExtension, databaseCommands, createDatabase, queryDatabase, calculate, cellValue, cellText, dbProperties, dbViews, dbRows, dbActiveView, currentDatabase, DB_PROPERTY_TYPES, DB_VIEW_TYPES, DB_FILTER_OPS, DB_CALCS, DB_COLORS } from './core/database';
 export type { DbProperty, DbPropertyType, DbOption, DbColor, DbView, DbViewType, DbFilter, DbFilterOp, DbSort, DbCalc, DbResult, DbGroup } from './core/database';
 export { notionExtension, tocEntries, formatDate } from './core/notion';
@@ -218,6 +222,9 @@ export {
   getPages,
   activePage,
   pageOf,
+  parentPage,
+  pagePath,
+  pageTree,
   emptyId,
   v as validators,
   FONT_FAMILIES,

@@ -14,9 +14,36 @@ import type { NodeSpec } from './schema';
 import { esc } from './html';
 import { safeUrl } from './schema';
 import { firstTextBlock, textSel, blockSel } from './selection';
+import { FormulaError, runFormula } from './formula';
 
-export type DbPropertyType = 'title' | 'text' | 'number' | 'select' | 'multi_select' | 'checkbox' | 'date' | 'url' | 'email' | 'person';
-export const DB_PROPERTY_TYPES: DbPropertyType[] = ['title', 'text', 'number', 'select', 'multi_select', 'checkbox', 'date', 'url', 'email', 'person'];
+export type DbPropertyType = 'title' | 'text' | 'number' | 'select' | 'multi_select' | 'checkbox' | 'date' | 'url' | 'email' | 'person' | 'formula' | 'relation' | 'rollup' | (string & {});
+/** Built-in types plus any registered with `registerDbPropertyType`. */
+export const DB_PROPERTY_TYPES: DbPropertyType[] = ['title', 'text', 'number', 'select', 'multi_select', 'checkbox', 'date', 'url', 'email', 'person', 'formula', 'relation', 'rollup'];
+
+/**
+ * A custom property type. Values are stored in the row's cells as JSON; the type decides how
+ * they are validated, shown as text, ordered and (optionally) rendered.
+ */
+export interface DbTypeSpec {
+  type: string;
+  label: string;
+  /** icon name or SVG markup shown in headers and menus */
+  icon?: string;
+  /** sanitize a value coming from the UI or from a stored document; return undefined to clear */
+  coerce: (value: any) => string | number | boolean | string[] | undefined;
+  text: (value: any) => string;
+  compare?: (a: any, b: any) => number;
+  /** optional DOM cell renderer: (ctx: { value, set, readOnly, label }) => HTMLElement */
+  render?: (ctx: { value: any; set: (v: any) => void; readOnly: boolean; label: string }) => any;
+}
+const customTypes = new Map<string, DbTypeSpec>();
+/** Register a custom database property type (global: available to every editor). */
+export function registerDbPropertyType(spec: DbTypeSpec): void {
+  if (!/^[a-z][a-z0-9_]{0,30}$/.test(spec.type) || ['title', 'formula', 'relation', 'rollup'].includes(spec.type)) throw new Error('zeditor: invalid database property type name "' + spec.type + '"');
+  customTypes.set(spec.type, spec);
+  if (!DB_PROPERTY_TYPES.includes(spec.type)) DB_PROPERTY_TYPES.push(spec.type);
+}
+export const dbTypeSpec = (type: string): DbTypeSpec | undefined => customTypes.get(type);
 export const DB_COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const;
 export type DbColor = (typeof DB_COLORS)[number];
 
@@ -31,6 +58,12 @@ export interface DbProperty {
   type: DbPropertyType;
   options?: DbOption[];
   width?: number;
+  /** formula source, see core/formula.ts */
+  formula?: string;
+  /** relation: id of the database whose rows this property links to */
+  relation?: { database: string };
+  /** rollup: follow `relation` (a relation property of this database) and summarize `target` there */
+  rollup?: { relation: string; target: string; calc: DbCalc | 'show' };
 }
 export type DbFilterOp = 'contains' | 'not_contains' | 'is' | 'is_not' | 'empty' | 'not_empty' | 'gt' | 'lt' | 'checked' | 'unchecked';
 export const DB_FILTER_OPS: DbFilterOp[] = ['contains', 'not_contains', 'is', 'is_not', 'empty', 'not_empty', 'gt', 'lt', 'checked', 'unchecked'];
@@ -45,13 +78,19 @@ export interface DbSort {
 }
 export type DbCalc = 'count' | 'filled' | 'empty' | 'unique' | 'sum' | 'avg' | 'min' | 'max' | 'checked' | 'percent_checked';
 export const DB_CALCS: DbCalc[] = ['count', 'filled', 'empty', 'unique', 'sum', 'avg', 'min', 'max', 'checked', 'percent_checked'];
-export type DbViewType = 'table' | 'board' | 'list' | 'gallery';
-export const DB_VIEW_TYPES: DbViewType[] = ['table', 'board', 'list', 'gallery'];
+export type DbViewType = 'table' | 'board' | 'list' | 'gallery' | 'calendar' | 'timeline';
+export const DB_VIEW_TYPES: DbViewType[] = ['table', 'board', 'list', 'gallery', 'calendar', 'timeline'];
 export interface DbView {
   id: string;
   name: string;
   type: DbViewType;
   filters?: DbFilter[];
+  /** 'and' (default): every filter must match; 'or': any filter */
+  filterMode?: 'and' | 'or';
+  /** calendar / timeline: the date property rows are placed by (default: the first date property) */
+  dateProp?: string;
+  /** timeline: optional end date property */
+  endProp?: string;
   sorts?: DbSort[];
   /** select property to group by (board columns; optional sections in other views) */
   groupBy?: string;
@@ -81,6 +120,9 @@ function cleanProperties(x: any): DbProperty[] {
     }
     const w = Math.round(Number(p.width));
     if (Number.isFinite(w) && w > 0) prop.width = Math.max(60, Math.min(800, w));
+    if (prop.type === 'formula') prop.formula = str(p.formula, 500);
+    if (prop.type === 'relation') prop.relation = { database: p.relation && ID.test(p.relation.database) ? p.relation.database : '' };
+    if (prop.type === 'rollup') prop.rollup = { relation: p.rollup && ID.test(p.rollup.relation) ? p.rollup.relation : '', target: p.rollup && ID.test(p.rollup.target) ? p.rollup.target : '', calc: p.rollup && (p.rollup.calc === 'show' || DB_CALCS.includes(p.rollup.calc)) ? p.rollup.calc : 'show' };
     out.push(prop);
   }
   // exactly one title property, always first
@@ -102,6 +144,9 @@ function cleanViews(x: any): DbView[] {
     const sorts = (Array.isArray(v.sorts) ? v.sorts.slice(0, 5) : []).filter((s: any) => s && ID.test(s.prop)).map((s: any) => ({ prop: s.prop, dir: s.dir === 'desc' ? 'desc' : 'asc' }) as DbSort);
     if (sorts.length) view.sorts = sorts;
     if (typeof v.groupBy === 'string' && ID.test(v.groupBy)) view.groupBy = v.groupBy;
+    if (v.filterMode === 'or') view.filterMode = 'or';
+    if (typeof v.dateProp === 'string' && ID.test(v.dateProp)) view.dateProp = v.dateProp;
+    if (typeof v.endProp === 'string' && ID.test(v.endProp)) view.endProp = v.endProp;
     const hidden = (Array.isArray(v.hidden) ? v.hidden.slice(0, 100) : []).filter((h: any) => typeof h === 'string' && ID.test(h));
     if (hidden.length) view.hidden = hidden;
     if (v.calc && typeof v.calc === 'object') {
@@ -143,8 +188,47 @@ export function dbActiveView(db: Block): DbView {
 export function dbRows(db: Block): Block[] {
   return (db.children ?? []).filter((r) => r.type === 'db_row');
 }
-export function cellValue(row: Block, prop: DbProperty): any {
-  const v = (row.attrs.cells ?? {})[prop.id];
+/** Evaluation context: lets computed cells (formula, relation, rollup) see the rest of the document. */
+export interface DbContext {
+  db: any;
+  props: DbProperty[];
+  /** look up any block of the document by id (index built lazily, once per context) */
+  find: (id: string) => any | undefined;
+  depth: number;
+}
+export function dbContext(db: any, parent?: DbContext): DbContext {
+  let index: Map<string, any> | null = null;
+  const find =
+    parent?.find ??
+    ((id: string) => {
+      if (!index) {
+        index = new Map();
+        let root = db;
+        while (root && root.parent) root = root.parent;
+        const walk = (x: any) => {
+          index!.set(x.id, x);
+          x.children?.forEach(walk);
+        };
+        if (root) walk(root);
+      }
+      return index.get(id);
+    });
+  return { db, props: db?.attrs?.properties ?? [], find, depth: (parent?.depth ?? -1) + 1 };
+}
+const MAX_DEPTH = 6;
+/** Rows a relation cell points at (only rows that still exist in the target database). */
+export function relatedRows(row: any, prop: DbProperty, ctx: DbContext = dbContext(row.parent)): any[] {
+  const ids = (row.attrs?.cells ?? {})[prop.id];
+  if (!Array.isArray(ids) || !prop.relation?.database) return [];
+  const target = ctx.find(prop.relation.database);
+  if (!target || target.type !== 'database') return [];
+  const byId = new Map<string, any>((target.children ?? []).map((r: any) => [r.id, r]));
+  return ids.map((id) => byId.get(id)).filter(Boolean);
+}
+const titleOf = (row: any): string => String((row.attrs?.cells ?? {}).title ?? ((row.parent?.attrs?.properties ?? []).find((p: DbProperty) => p.type === 'title') ? (row.attrs?.cells ?? {})[(row.parent.attrs.properties as DbProperty[]).find((p) => p.type === 'title')!.id] ?? '' : ''));
+
+export function cellValue(row: any, prop: DbProperty, ctx: DbContext = dbContext(row.parent ?? { attrs: { properties: [prop] } })): any {
+  const v = (row.attrs?.cells ?? {})[prop.id];
   switch (prop.type) {
     case 'number':
       return typeof v === 'number' ? v : v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v);
@@ -154,38 +238,86 @@ export function cellValue(row: Block, prop: DbProperty): any {
       return Array.isArray(v) ? v.filter((id) => prop.options?.some((o) => o.id === id)) : [];
     case 'select':
       return typeof v === 'string' && prop.options?.some((o) => o.id === v) ? v : null;
-    default:
+    case 'relation':
+      return relatedRows(row, prop, ctx).map((r) => r.id);
+    case 'formula': {
+      if (ctx.depth > MAX_DEPTH) return '#ERR: circular reference';
+      const inner = { ...ctx, depth: ctx.depth + 1 };
+      return runFormula(prop.formula ?? '', (name) => {
+        const p = ctx.props.find((x) => x.name === name);
+        if (!p) throw new FormulaError('No property "' + name + '"');
+        if (p.id === prop.id) throw new FormulaError('A formula cannot use itself');
+        const val = cellValue(row, p, inner);
+        if (typeof val === 'number' || typeof val === 'boolean' || val == null) return val;
+        return p.type === 'date' || typeof val === 'string' ? (p.type === 'select' || p.type === 'multi_select' || p.type === 'relation' ? cellText(row, p, inner) : String(val)) : cellText(row, p, inner);
+      });
+    }
+    case 'rollup': {
+      if (ctx.depth > MAX_DEPTH) return '#ERR: circular reference';
+      const rel = ctx.props.find((p) => p.id === prop.rollup?.relation && p.type === 'relation');
+      if (!rel) return null;
+      const rows = relatedRows(row, rel, ctx);
+      const target = ctx.find(rel.relation!.database);
+      const tctx = dbContext(target, ctx);
+      const tp = tctx.props.find((p) => p.id === prop.rollup!.target) ?? tctx.props.find((p) => p.type === 'title');
+      if (!tp) return null;
+      if (prop.rollup!.calc === 'show') return rows.map((r) => cellText(r, tp, tctx)).filter(Boolean).join(', ');
+      const out = calculate(rows, tp, prop.rollup!.calc as DbCalc, tctx);
+      return out !== '' && Number.isFinite(Number(out)) ? Number(out) : out;
+    }
+    default: {
+      const spec = customTypes.get(prop.type);
+      if (spec) {
+        try {
+          const c = spec.coerce(v);
+          return c === undefined ? null : c;
+        } catch {
+          return null;
+        }
+      }
       return v == null ? '' : String(v);
+    }
   }
 }
 /** Display text of a cell (also what filters, sorts and exports use). */
-export function cellText(row: Block, prop: DbProperty): string {
-  const v = cellValue(row, prop);
+export function cellText(row: any, prop: DbProperty, ctx: DbContext = dbContext(row.parent ?? { attrs: { properties: [prop] } })): string {
+  const v = cellValue(row, prop, ctx);
   if (prop.type === 'select') return prop.options?.find((o) => o.id === v)?.name ?? '';
   if (prop.type === 'multi_select') return (v as string[]).map((id) => prop.options!.find((o) => o.id === id)!.name).join(', ');
   if (prop.type === 'checkbox') return v ? '✓' : '';
+  if (prop.type === 'relation') return relatedRows(row, prop, ctx).map(titleOf).filter(Boolean).join(', ');
+  const spec = customTypes.get(prop.type);
+  if (spec && v != null) {
+    try {
+      return String(spec.text(v) ?? '');
+    } catch {
+      return '';
+    }
+  }
+  if (typeof v === 'boolean') return v ? '✓' : '';
+  if (typeof v === 'number') return String(Math.round(v * 1e6) / 1e6);
   return v == null ? '' : String(v);
 }
-function isEmptyCell(row: Block, prop: DbProperty): boolean {
-  const v = cellValue(row, prop);
-  return prop.type === 'checkbox' ? !v : v == null || v === '' || (Array.isArray(v) && !v.length);
+function isEmptyCell(row: any, prop: DbProperty, ctx?: DbContext): boolean {
+  const v = cellValue(row, prop, ctx);
+  return prop.type === 'checkbox' ? !v : v == null || v === '' || v === false || (Array.isArray(v) && !v.length);
 }
-function matches(row: Block, prop: DbProperty, f: DbFilter): boolean {
-  const text = cellText(row, prop).toLowerCase();
+function matches(row: any, prop: DbProperty, f: DbFilter, ctx?: DbContext): boolean {
+  const text = cellText(row, prop, ctx).toLowerCase();
   const want = (f.value ?? '').toLowerCase();
   switch (f.op) {
     case 'empty':
-      return isEmptyCell(row, prop);
+      return isEmptyCell(row, prop, ctx);
     case 'not_empty':
-      return !isEmptyCell(row, prop);
+      return !isEmptyCell(row, prop, ctx);
     case 'checked':
-      return cellValue(row, prop) === true;
+      return cellValue(row, prop, ctx) === true;
     case 'unchecked':
-      return cellValue(row, prop) !== true;
+      return cellValue(row, prop, ctx) !== true;
     case 'is':
-      return prop.type === 'multi_select' ? text.split(', ').includes(want) : text === want;
+      return prop.type === 'multi_select' || prop.type === 'relation' ? text.split(', ').includes(want) : text === want;
     case 'is_not':
-      return prop.type === 'multi_select' ? !text.split(', ').includes(want) : text !== want;
+      return prop.type === 'multi_select' || prop.type === 'relation' ? !text.split(', ').includes(want) : text !== want;
     case 'contains':
       return !want || text.includes(want);
     case 'not_contains':
@@ -193,38 +325,47 @@ function matches(row: Block, prop: DbProperty, f: DbFilter): boolean {
     case 'gt':
     case 'lt': {
       if (want === '') return true;
-      const a = prop.type === 'number' ? (cellValue(row, prop) as number | null) : text;
-      const b = prop.type === 'number' ? Number(f.value) : want;
+      const raw = cellValue(row, prop, ctx);
+      const numeric = typeof raw === 'number' && Number.isFinite(Number(f.value));
+      const a = numeric ? raw : text;
+      const b = numeric ? Number(f.value) : want;
       if (a == null || a === '') return false;
       return f.op === 'gt' ? a > b : a < b;
     }
   }
 }
-function compare(a: Block, b: Block, prop: DbProperty): number {
-  if (prop.type === 'number' || prop.type === 'checkbox') {
-    const x = cellValue(a, prop);
-    const y = cellValue(b, prop);
-    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1; // empty values last
-    return Number(x) - Number(y);
+function compare(a: any, b: any, prop: DbProperty, ctx?: DbContext): number {
+  const x0 = cellValue(a, prop, ctx);
+  const y0 = cellValue(b, prop, ctx);
+  const spec = customTypes.get(prop.type);
+  if (spec?.compare && x0 != null && y0 != null) return spec.compare(x0, y0);
+  if ((typeof x0 === 'number' || typeof x0 === 'boolean' || x0 == null) && (typeof y0 === 'number' || typeof y0 === 'boolean' || y0 == null) && prop.type !== 'select') {
+    if (x0 == null || y0 == null) return x0 == null ? (y0 == null ? 0 : 1) : -1; // empty values last
+    return Number(x0) - Number(y0);
   }
   if (prop.type === 'select') {
     // option order, not alphabetical
-    const idx = (r: Block) => {
-      const i = prop.options!.findIndex((o) => o.id === cellValue(r, prop));
+    const idx = (v: any) => {
+      const i = prop.options!.findIndex((o) => o.id === v);
       return i < 0 ? Infinity : i;
     };
-    return idx(a) - idx(b) || 0;
+    return idx(x0) - idx(y0) || 0;
   }
-  const x = cellText(a, prop);
-  const y = cellText(b, prop);
+  const x = cellText(a, prop, ctx);
+  const y = cellText(b, prop, ctx);
   if (!x || !y) return x ? -1 : y ? 1 : 0;
   return x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
 }
 
-export function calculate(rows: Block[], prop: DbProperty, calc: DbCalc): string {
-  const filled = rows.filter((r) => !isEmptyCell(r, prop));
-  const nums = rows.map((r) => (prop.type === 'number' ? (cellValue(r, prop) as number | null) : Number(cellText(r, prop)))).filter((n): n is number => typeof n === 'number' && Number.isFinite(n) && n !== null);
-  const numeric = prop.type === 'number' ? nums : filled.length ? nums : [];
+export function calculate(rows: any[], prop: DbProperty, calc: DbCalc, ctx?: DbContext): string {
+  const filled = rows.filter((r) => !isEmptyCell(r, prop, ctx));
+  const nums = filled
+    .map((r) => {
+      const v = cellValue(r, prop, ctx);
+      return typeof v === 'number' ? v : Number(cellText(r, prop, ctx));
+    })
+    .filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
+  const numeric = nums;
   const fmt = (n: number) => String(Math.round(n * 100) / 100);
   switch (calc) {
     case 'count':
@@ -234,7 +375,7 @@ export function calculate(rows: Block[], prop: DbProperty, calc: DbCalc): string
     case 'empty':
       return String(rows.length - filled.length);
     case 'unique':
-      return String(new Set(filled.map((r) => cellText(r, prop))).size);
+      return String(new Set(filled.map((r) => cellText(r, prop, ctx))).size);
     case 'sum':
       return fmt(numeric.reduce((a, b) => a + b, 0));
     case 'avg':
@@ -244,9 +385,9 @@ export function calculate(rows: Block[], prop: DbProperty, calc: DbCalc): string
     case 'max':
       return numeric.length ? fmt(Math.max(...numeric)) : '';
     case 'checked':
-      return String(rows.filter((r) => cellValue(r, prop) === true).length);
+      return String(rows.filter((r) => cellValue(r, prop, ctx) === true).length);
     case 'percent_checked':
-      return rows.length ? Math.round((rows.filter((r) => cellValue(r, prop) === true).length / rows.length) * 100) + '%' : '';
+      return rows.length ? Math.round((rows.filter((r) => cellValue(r, prop, ctx) === true).length / rows.length) * 100) + '%' : '';
   }
 }
 
@@ -268,6 +409,11 @@ export interface DbResult {
   groupBy: DbProperty | null;
   calc: Record<string, string>;
   total: number;
+  /** date property used by calendar / timeline views, if any */
+  dateProp: DbProperty | null;
+  endProp: DbProperty | null;
+  /** evaluation context, reusable for `cellValue` / `cellText` on these rows */
+  ctx: DbContext;
 }
 
 /** Evaluate a view: filter, sort, group and calculate. Pure; does not touch the document. */
@@ -276,17 +422,20 @@ export function queryDatabase(db: Block, viewId?: string): DbResult {
   const view = dbViews(db).find((v) => v.id === viewId) ?? dbActiveView(db);
   const byId = new Map(properties.map((p) => [p.id, p]));
   const all = dbRows(db);
-  let rows = all.filter((r) => (view.filters ?? []).every((f) => !byId.has(f.prop) || matches(r, byId.get(f.prop)!, f)));
+  const ctx = dbContext(db);
+  const filters = (view.filters ?? []).filter((f) => byId.has(f.prop));
+  const test = (r: Block, f: DbFilter) => matches(r, byId.get(f.prop)!, f, ctx);
+  let rows = !filters.length ? all : all.filter((r) => (view.filterMode === 'or' ? filters.some((f) => test(r, f)) : filters.every((f) => test(r, f))));
   const sorts = (view.sorts ?? []).filter((s) => byId.has(s.prop));
   if (sorts.length) {
     const order = new Map(all.map((r, i) => [r.id, i]));
     rows = [...rows].sort((a, b) => {
       for (const s of sorts) {
         const prop = byId.get(s.prop)!;
-        const empty = (r: Block) => isEmptyCell(r, prop) && prop.type !== 'checkbox';
+        const empty = (r: Block) => isEmptyCell(r, prop, ctx) && prop.type !== 'checkbox';
         // rows without a value stay at the end in both directions
         if (empty(a) !== empty(b)) return empty(a) ? 1 : -1;
-        const c = compare(a, b, prop);
+        const c = compare(a, b, prop, ctx);
         if (c) return s.dir === 'desc' ? -c : c;
       }
       return order.get(a.id)! - order.get(b.id)!;
@@ -299,12 +448,15 @@ export function queryDatabase(db: Block, viewId?: string): DbResult {
   if (groupBy) {
     const g = groupBy;
     groups = [{ option: null as DbOption | null, rows: [] as Block[] }, ...(g.options ?? []).map((o) => ({ option: o as DbOption | null, rows: [] as Block[] }))];
-    for (const r of rows) (groups.find((x) => x.option?.id === cellValue(r, g)) ?? groups[0]).rows.push(r);
+    for (const r of rows) (groups.find((x) => x.option?.id === cellValue(r, g, ctx)) ?? groups[0]).rows.push(r);
   }
   const hidden = new Set(view.hidden ?? []);
   const calc: Record<string, string> = {};
-  for (const k in view.calc ?? {}) if (byId.has(k)) calc[k] = calculate(rows, byId.get(k)!, view.calc![k]);
-  return { view, properties, visible: properties.filter((p) => p.type === 'title' || !hidden.has(p.id)), rows, groups, groupBy, calc, total: all.length };
+  for (const k in view.calc ?? {}) if (byId.has(k)) calc[k] = calculate(rows, byId.get(k)!, view.calc![k], ctx);
+  const dates = properties.filter((p) => p.type === 'date');
+  const dateProp = dates.find((p) => p.id === view.dateProp) ?? dates[0] ?? null;
+  const endProp = dates.find((p) => p.id === view.endProp && p.id !== dateProp?.id) ?? null;
+  return { view, properties, visible: properties.filter((p) => p.type === 'title' || !hidden.has(p.id)), rows, groups, groupBy, calc, total: all.length, dateProp, endProp, ctx };
 }
 
 /* ------------------------------------------------------------------ commands */
@@ -383,8 +535,15 @@ export const databaseCommands: Record<string, CommandFn> = {
   dbMoveRow: (editor, rowId: string, targetRowId: string, place: 'before' | 'after' = 'before') => {
     const row = editor.doc.get(rowId);
     const target = editor.doc.get(targetRowId);
-    if (!row || !target || row.type !== 'db_row' || target.type !== 'db_row' || row.parent !== target.parent) return false;
-    return editor.exec('moveBlocksTo', [rowId], targetRowId, place);
+    if (!row || !target || row === target || row.type !== 'db_row' || target.type !== 'db_row' || row.parent !== target.parent || editor.readOnly) return false;
+    const sel = editor.selection;
+    let moved = false;
+    // keeps the selection where it was: a moved row is not "selected" as a block
+    const ok = editor.update((tr) => {
+      moved = tr.move([rowId], target.parent!.id, target.index + (place === 'after' ? 1 : 0));
+      tr.select(sel?.type === 'block' && sel.ids.includes(rowId) ? blockSel([target.parent!.id]) : sel);
+    });
+    return ok && moved;
   },
   dbSetCell: (editor, rowId: string, propId: string, value: any) => {
     const row = editor.doc.get(rowId);
@@ -392,7 +551,15 @@ export const databaseCommands: Record<string, CommandFn> = {
     const prop = dbProperties(row.parent!).find((p) => p.id === propId);
     if (!prop) return false;
     let v = value;
-    if (prop.type === 'number') v = value === '' || value == null || !Number.isFinite(Number(value)) ? undefined : Number(value);
+    if (prop.type === 'formula' || prop.type === 'rollup') return false; // computed
+    if (prop.type === 'relation') v = Array.isArray(value) ? [...new Set(value.filter((x) => typeof x === 'string' && ID.test(x)))].slice(0, 50) : undefined;
+    else if (customTypes.has(prop.type)) {
+      try {
+        v = value == null ? undefined : customTypes.get(prop.type)!.coerce(value);
+      } catch {
+        v = undefined;
+      }
+    } else if (prop.type === 'number') v = value === '' || value == null || !Number.isFinite(Number(value)) ? undefined : Number(value);
     else if (prop.type === 'checkbox') v = value === true ? true : undefined;
     else if (prop.type === 'select') v = prop.options?.some((o) => o.id === value) ? value : undefined;
     else if (prop.type === 'multi_select') v = Array.isArray(value) ? value.filter((id) => prop.options?.some((o) => o.id === id)) : undefined;
@@ -408,8 +575,9 @@ export const databaseCommands: Record<string, CommandFn> = {
     const db = getDb(editor, dbId);
     if (!db) return false;
     const type = one(def.type, DB_PROPERTY_TYPES, 'text');
-    const prop: DbProperty = { id: 'p' + newId().slice(1, 8), name: str(def.name, 100) || 'Property ' + dbProperties(db).length, type: type === 'title' ? 'text' : type };
+    const prop: DbProperty = { ...def, id: 'p' + newId().slice(1, 8), name: str(def.name, 100) || (customTypes.get(type)?.label ?? type[0].toUpperCase() + type.slice(1).replace('_', ' ')) + (dbProperties(db).some((p) => p.type === type) ? ' ' + dbProperties(db).length : ''), type: type === 'title' ? 'text' : type };
     if (prop.type === 'select' || prop.type === 'multi_select') prop.options = def.options ?? [];
+    editor.storage.db = { ...(editor.storage.db ?? {}), lastProperty: prop.id };
     return patchDb(editor, db, { properties: cleanProperties([...dbProperties(db), prop]) });
   },
   dbUpdateProperty: (editor, dbId: string, propId: string, patch: Partial<DbProperty>) => {
@@ -453,6 +621,23 @@ export const databaseCommands: Record<string, CommandFn> = {
       tr.setAttrs(db.id, { properties: dbProperties(db).filter((p) => p.id !== propId), views: cleanViews(dbViews(db).map(strip)) });
     });
   },
+  /** Move a property to another position (the title property always stays first). */
+  dbMoveProperty: (editor, dbId: string, propId: string, toIndex: number) => {
+    const db = getDb(editor, dbId);
+    if (!db) return false;
+    const props = [...dbProperties(db)];
+    const from = props.findIndex((p) => p.id === propId);
+    if (from < 1) return false;
+    const [p] = props.splice(from, 1);
+    props.splice(Math.max(1, Math.min(toIndex, props.length)), 0, p);
+    if (props.every((x, i) => x === dbProperties(db)[i])) return false;
+    return patchDb(editor, db, { properties: props });
+  },
+  /** Match every filter ('and') or any filter ('or'). */
+  dbFilterMode: (editor, dbId: string, mode: 'and' | 'or', viewId?: string) => {
+    const db = getDb(editor, dbId);
+    return !!db && patchView(editor, db, viewId, (v) => ({ ...v, filterMode: mode === 'or' ? 'or' : undefined }));
+  },
   /** Add a select option; returns true and stores its id in `editor.storage.db.lastOption`. */
   dbAddOption: (editor, dbId: string, propId: string, name: string, color?: DbColor) => {
     const db = getDb(editor, dbId);
@@ -471,6 +656,17 @@ export const databaseCommands: Record<string, CommandFn> = {
     const view: DbView = { id: 'v' + newId().slice(1, 7), name: str(name, 60) || t[0].toUpperCase() + t.slice(1), type: t };
     const sel = dbProperties(db).find((p) => p.type === 'select');
     if (t === 'board' && sel) view.groupBy = sel.id;
+    if (t === 'calendar' || t === 'timeline') {
+      // these views need a date: create one if the database has none
+      let date = dbProperties(db).find((p) => p.type === 'date');
+      if (!date) {
+        date = { id: 'p' + newId().slice(1, 8), name: 'Date', type: 'date' };
+        const props = cleanProperties([...dbProperties(db), date]);
+        view.dateProp = date.id;
+        return patchDb(editor, db, { properties: props, views: [...dbViews(db), view], view: view.id });
+      }
+      view.dateProp = date.id;
+    }
     return patchDb(editor, db, { views: [...dbViews(db), view], view: view.id });
   },
   dbUpdateView: (editor, dbId: string, viewId: string | undefined, patch: Partial<DbView>) => {
@@ -548,8 +744,9 @@ export const databaseCommands: Record<string, CommandFn> = {
 function tableHTML(db: any, c: any): string {
   const props: DbProperty[] = db.attrs?.properties ?? [];
   const rows = ((db.children ?? []) as any[]).filter((r) => r.type === 'db_row');
+  const ctx = dbContext(db);
   const cell = (r: any, p: DbProperty): string => {
-    const text = cellText(r, p);
+    const text = cellText(r, p, ctx);
     if ((p.type === 'url' || p.type === 'email') && text) {
       const href = safeUrl(p.type === 'email' ? 'mailto:' + text : text);
       if (href) return `<a href="${esc(href)}" rel="noopener noreferrer nofollow">${esc(text)}</a>`;
@@ -586,7 +783,7 @@ const databaseNodes: NodeSpec[] = [
       const props: DbProperty[] = b.attrs?.properties ?? [];
       const rows = ((b.children ?? []) as any[]).filter((r) => r.type === 'db_row');
       const line = (cells: string[]) => '| ' + cells.map((s) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ') + ' |';
-      return [b.attrs?.title ? `**${b.attrs.title}**\n` : '', line(props.map((p) => p.name)), line(props.map(() => '---')), ...rows.map((r) => line(props.map((p) => cellText(r, p))))].filter(Boolean).join('\n');
+      return [b.attrs?.title ? `**${b.attrs.title}**\n` : '', line(props.map((p) => p.name)), line(props.map(() => '---')), ...rows.map((r) => line(props.map((p) => cellText(r, p, dbContext(b)))))].filter(Boolean).join('\n');
     },
     toText: (b) => b.attrs?.title ?? '',
   },
@@ -629,6 +826,8 @@ export const databaseExtension: Extension = {
     dbSlash('db-board', 'Database – board', 'Kanban grouped by a select', 'board', 51),
     dbSlash('db-list', 'Database – list', 'Compact list of pages', 'list', 52),
     dbSlash('db-gallery', 'Database – gallery', 'Cards with a preview', 'gallery', 53),
+    dbSlash('db-calendar', 'Database – calendar', 'Month view by a date', 'calendar', 54),
+    dbSlash('db-timeline', 'Database – timeline', 'Bars across days', 'timeline', 55),
   ],
   labels: {
     'db.untitled': 'Untitled database',
@@ -662,8 +861,11 @@ export const databaseExtension: Extension = {
   },
   setup: (editor) =>
     // a caret that lands inside a collapsed row's page (find, undo, remote edit) opens the row
-    editor.on('selection', ({ selection }) => {
-      if (!selection || selection.type !== 'text') return;
+    editor.on('transaction', ({ tr, selectionChanged }) => {
+      const selection = editor.selection;
+      // a selection read from the DOM cannot really be inside hidden content: it is the
+      // browser normalising a placeholder caret, and must not open anything
+      if (!selectionChanged || tr.meta.fromDOM || !selection || selection.type !== 'text') return;
       const row = editor.doc.closest(editor.doc.get(selection.focus.id), (b) => b.type === 'db_row');
       if (!row) return;
       const st = (editor.storage.db ??= {});
@@ -688,6 +890,8 @@ declare module './editor' {
     dbUpdateProperty(dbId: string, propId: string, patch: Partial<DbProperty>): boolean;
     dbDeleteProperty(dbId: string, propId: string): boolean;
     dbAddOption(dbId: string, propId: string, name: string, color?: DbColor): boolean;
+    dbMoveProperty(dbId: string, propId: string, toIndex: number): boolean;
+    dbFilterMode(dbId: string, mode: 'and' | 'or', viewId?: string): boolean;
     dbAddView(dbId: string, type?: DbViewType, name?: string): boolean;
     dbUpdateView(dbId: string, viewId: string | undefined, patch: Partial<DbView>): boolean;
     dbDeleteView(dbId: string, viewId: string): boolean;

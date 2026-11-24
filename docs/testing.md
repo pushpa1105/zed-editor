@@ -17,7 +17,7 @@ Internet Explorer and legacy Edge are not supported.
 
 Run everything with `pnpm test` (Node) and `pnpm test:browser` (Playwright).
 
-### Model tests — Vitest, Node (`packages/zeditor/test/unit`, 96 tests)
+### Model tests — Vitest, Node (`packages/zeditor/test/unit`, 103 tests)
 
 | File | Covers |
 | --- | --- |
@@ -27,9 +27,10 @@ Run everything with `pnpm test` (Node) and `pnpm test:browser` (Playwright).
 | `features.test.ts` | comment anchors (edit, move, delete, undo, permissions), suggestions, versions, autosave (late responses, offline, retry, draft recovery), uploads (abort on delete, stale results, retry), stale typeahead results, find/replace, pages, extension ordering/conflicts/cleanup, hashtags/autolinks, TOC, static rendering |
 | `collab.test.ts` | sync, concurrent edits, structure replication, offline merge, per-user undo, presence, shared comments, concurrent table shape edits, persistence, permissions, **randomized 3-client convergence** (4 seeds) |
 | `database.test.ts` | databases: rows as pages, sort / filter / group / calculate, cell coercion, property conversion and deletion, hostile schemas, HTML / JSON / Markdown, missing-feature preservation, concurrent row and schema edits; table of contents, bookmarks with stale previews, template buttons, page links, dates, toggle headings |
+| `database2.test.ts` | the formula language (precedence, functions, hostile input, unknown names), formula properties in sort / filter / calculations, relations and rollups incl. deleted rows and circular references, match-any filters, calendar / timeline queries, property reordering, custom property types, row moves, sub-pages (tree order, re-parenting, cycles), synced copies |
 | `fuzz.test.ts` | **randomized operations** (8 seeds × 400 ops over ~50 commands, including database, template and outline operations): invariants after every step, serializer round trips, full undo back to the initial document |
 
-### Browser tests — Playwright (`packages/zeditor/test/browser`, 60 tests × 3 engines)
+### Browser tests — Playwright (`packages/zeditor/test/browser`, 69 tests × 3 engines)
 
 | File | Covers |
 | --- | --- |
@@ -38,6 +39,7 @@ Run everything with `pnpm test` (Node) and `pnpm test:browser` (Playwright).
 | `rich.spec.ts` | table tools, drag and keyboard cell selection, merge/split, **spreadsheet paste → undo → serialize → reload**, range copy, column resize, clipboard formats, URL-on-selection, hostile HTML paste, code blocks + highlighting, **image upload lifecycle**, async mentions with stale results, find/replace, link editing |
 | `platform.spec.ts` | **IME composition** (CJK, Hangul, dead keys, Devanagari), accessibility roles/names, **keyboard-only operation**, focus restoration, **touch** without hover, multiple editors, **listener cleanup**, missing-extension recovery in the DOM, failing host renderer fallback, **file drop upload**, autosave status and drafts, block links |
 | `notion.spec.ts` | **databases**: creation from the slash menu, cell / option / row editing, property menu, calculations, sort and filter, **board drag between columns**, list and gallery, **row pages**, read-only; table of contents, bookmark previews, date chips, template buttons, toggle headings, `[[` page links |
+| `notion2.spec.ts` | **formula** settings and live errors, **relation picker and rollup**, **calendar** (day placement, per-day add, month navigation) and **timeline** bars, **column resize and drag reorder**, match-any filters, board lane geometry, the toolbar **Insert menu**, **sub-pages and breadcrumbs**, synced copies |
 | `integrations.spec.ts` | the three built examples: plain HTML, **React Strict Mode**, **Vue + Vuetify with mount/unmount cycles**, and one saved document opening in all three |
 | `collab.spec.ts` | the two-client example: concurrent typing, presence rendering, offline merge, per-user undo, structure replication |
 
@@ -47,9 +49,9 @@ Recorded by `pnpm test:browser` in `packages/zeditor/test-results/browser-result
 
 | Engine | Passed | Skipped | Failed |
 | --- | --- | --- | --- |
-| Chromium 159 (headless) | 60 | 0 | 0 |
-| Firefox (Playwright build) | 58 | 2 | 0 |
-| WebKit 27.2 (Playwright build) | 58 | 2 | 0 |
+| Chromium 159 (headless) | 69 | 0 | 0 |
+| Firefox (Playwright build) | 67 | 2 | 0 |
+| WebKit 27.2 (Playwright build) | 67 | 2 | 0 |
 
 Skipped outside Chromium, by design:
 
@@ -142,6 +144,8 @@ Not automated. Run before a release on real hardware; record browser, OS and inp
       picker announces options and selection.
 - [ ] Touch: edit cells, open the option picker, drag a board card between columns.
 - [ ] A database with 500+ rows stays usable (there is no row virtualization).
+- [ ] Touch: resize and reorder table columns, drag a board card onto another to reorder.
+- [ ] Screen reader: calendar days and timeline bars are understandable; formula errors are announced.
 
 ### Other
 

@@ -17,6 +17,8 @@ export interface ToolbarOptions {
   floating?: boolean;
   icons?: Record<string, string>;
   label?: string;
+  /** show the "Insert" menu built from the slash-menu items (default true) */
+  insert?: boolean;
 }
 export interface UIHandle {
   dom: HTMLElement;
@@ -200,6 +202,69 @@ export function createToolbar(editor: Editor, opts: ToolbarOptions = {}): UIHand
       });
     }
     dom.append(btn);
+  }
+  // "Insert": every slash-menu item is also reachable from the toolbar (useful in classic mode)
+  if (!opts.floating && editor.slashItems.length && (opts.items ? opts.items.includes('insert') : opts.insert !== false)) {
+    const ins = h('button', { type: 'button', class: 'z-tool z-tool-insert', 'aria-label': editor.label('insert', 'Insert'), title: editor.label('insert', 'Insert'), 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'data-id': 'insert' }, h('span', { html: icon('plus', opts.icons) }), h('span', { class: 'z-tool-label' }, editor.label('insert', 'Insert')));
+    ins.addEventListener('mousedown', (e) => e.preventDefault());
+    ins.addEventListener('click', () => {
+      if (ins.getAttribute('aria-expanded') === 'true' || editor.readOnly) return;
+      const search = h('input', { class: 'z-input', type: 'search', placeholder: editor.label('insert.search', 'Search blocks…'), 'aria-label': editor.label('insert.search', 'Search blocks…') });
+      const listEl = h('div', { class: 'z-insert-list', role: 'menu', 'aria-label': editor.label('insert', 'Insert') });
+      const menu = h('div', { class: 'z-menu z-insert-menu', 'data-z-ignore': '' }, search, listEl);
+      const close = () => {
+        off();
+        menu.remove();
+        ins.setAttribute('aria-expanded', 'false');
+      };
+      const render = () => {
+        const q = search.value.trim().toLowerCase();
+        listEl.textContent = '';
+        let group: string | undefined;
+        for (const it of editor.slashItems.filter((i) => !q || i.title.toLowerCase().includes(q) || (i.keywords ?? []).some((k) => k.includes(q)))) {
+          if (it.group !== group && !q) listEl.append(h('div', { class: 'z-menu-group', role: 'presentation' }, it.group ?? ''));
+          group = it.group;
+          const row = h('button', { type: 'button', class: 'z-menu-item', role: 'menuitem' }, h('span', { class: 'z-menu-icon', html: icon(it.icon, opts.icons) || undefined }), h('span', { class: 'z-menu-text' }, h('span', { class: 'z-menu-title' }, it.title), it.description ? h('span', { class: 'z-menu-desc' }, it.description) : null));
+          row.addEventListener('click', () => {
+            close();
+            const sel = editor.selection;
+            // act on the block holding the selection; fall back to the end of the document
+            const blockId = sel?.type === 'text' ? sel.focus.id : sel?.type === 'block' ? sel.ids[sel.ids.length - 1] : sel?.type === 'cell' ? sel.focus : (editor.doc.last()?.id ?? '');
+            editor.focus();
+            editor.cutHistory();
+            it.run(editor, { blockId });
+          });
+          listEl.append(row);
+        }
+        if (!listEl.firstChild) listEl.append(h('div', { class: 'z-menu-empty' }, editor.label('slash.empty')));
+      };
+      search.addEventListener('input', render);
+      search.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          (listEl.querySelector('.z-menu-item') as HTMLElement | null)?.focus();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          (listEl.querySelector('.z-menu-item') as HTMLElement | null)?.click();
+        }
+      });
+      render();
+      (dom.closest('.zeditor') ?? document.body).append(menu);
+      place(menu, ins.getBoundingClientRect());
+      roving(listEl, '.z-menu-item', true);
+      ins.setAttribute('aria-expanded', 'true');
+      const off = dismissable(menu, () => {
+        close();
+        ins.focus();
+      }, { ignore: ins });
+      search.focus();
+    });
+    updaters.push(() => {
+      ins.disabled = editor.readOnly;
+    });
+    const firstSep = dom.querySelector('.z-sep');
+    if (firstSep && !opts.items) firstSep.after(ins, h('span', { class: 'z-sep', role: 'separator', 'aria-orientation': 'vertical' }));
+    else dom.append(ins);
   }
   roving(dom, '.z-tool');
   let raf: any = 0;

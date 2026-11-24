@@ -140,7 +140,9 @@ export function createAutosave(editor: Editor, opts: AutosaveOptions): Autosave 
   };
   const doSave = (): Promise<boolean> => {
     if (destroyed) return Promise.resolve(false);
-    if (inFlight) return inFlight.then(() => (editor.revision > savedRevision ? doSave() : true));
+    // queued behind a running save: continue only if it succeeded — after a failure the retry
+    // delay decides when to try again, not the callers that were waiting
+    if (inFlight) return inFlight.then((ok) => (ok && editor.revision > savedRevision ? doSave() : ok));
     if (editor.revision <= savedRevision) {
       setStatus('saved');
       return Promise.resolve(true);

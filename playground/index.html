@@ -86,6 +86,7 @@
       const KEY = 'zeditor-playground';
       let z, review, comments, suggestions, versions;
 
+      const isoIn = (days) => { const d = new Date(Date.now() + days * 86400000); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
       const sample = () => ({
         format: 'zeditor', version: 1,
         blocks: [
@@ -110,12 +111,13 @@
               { name: 'Points', type: 'number' },
               { name: 'Due', type: 'date' },
               { name: 'Shipped', type: 'checkbox' },
+              { name: 'Effort', type: 'formula', formula: 'if(prop("Points") > 4, "L", "S") + " · " + prop("Points") * 2 + "h"' },
             ],
             rows: [
-              { Task: 'Design the toolbar', Status: 'Done', Tags: ['UI'], Points: 3, Due: '2026-11-02', Shipped: true },
-              { Task: 'Write the quick starts', Status: 'In progress', Tags: ['Docs'], Points: 5, Due: '2026-11-28' },
-              { Task: 'Set up the relay', Status: 'To do', Tags: ['Infra'], Points: 8 },
-              { Task: 'Polish the block handles', Status: 'In progress', Tags: ['UI', 'Docs'], Points: 2 },
+              { Task: 'Design the toolbar', Status: 'Done', Tags: ['UI'], Points: 3, Due: isoIn(-3), Shipped: true },
+              { Task: 'Write the quick starts', Status: 'In progress', Tags: ['Docs'], Points: 5, Due: isoIn(2) },
+              { Task: 'Set up the relay', Status: 'To do', Tags: ['Infra'], Points: 8, Due: isoIn(6) },
+              { Task: 'Polish the block handles', Status: 'In progress', Tags: ['UI', 'Docs'], Points: 2, Due: isoIn(2) },
             ],
           }),
           ...SHARED_DOCUMENT.blocks,

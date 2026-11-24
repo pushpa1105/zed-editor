@@ -237,19 +237,22 @@ Nothing here was compared against Notion side by side: **no parity is claimed**.
 | Each row is a page with its own content | row children are ordinary blocks; "Open" reveals them | ✅ | U database; B notion "a row opens as a page…" |
 | Table view: inline cell editing, add / rename / retype / hide / delete properties | ✅ | ✅ | B notion "properties…" |
 | Select options created on the fly, coloured chips | ✅ | ✅ | B notion "slash command creates…" |
-| Board (kanban) view grouped by a select; drag cards between columns | ✅ (reordering cards inside a column ❌) | 🟡 | B notion "views: board…" |
-| List and gallery views | ✅ (gallery has no cover images) | 🟡 | B notion "views…" |
+| Board (kanban) view grouped by a select; drag cards between columns and to reorder | ✅ full-height lanes, cards packed per lane | ✅ | B notion "views: board…"; B notion2 "board lanes…" |
+| List and gallery views | ✅ gallery cover = first image of the row page, or its text (no cover picker) | 🟡 | B notion "views…" |
 | Several saved views per database, each with its own settings | ✅ | ✅ | U database "sorts, filters…" |
-| Filters (10 operators, all must match) | ✅ (no AND/OR groups) | 🟡 | U database; B notion "sort and filter…" |
+| Filters (10 operators; match all or match any) | ✅ (no nested groups) | 🟡 | U database2 "match any"; B notion "sort and filter…", notion2 "filters can match all or any" |
 | Sorts (one per view in the UI; several through the API) | ✅ | 🟡 | U database; B notion |
 | Column calculations (count, sum, average, min, max, % checked…) | ✅ | ✅ | U database; B notion "properties…" |
 | Convert a text property to select / multi-select keeping values | ✅ | ✅ | U database "adds, converts…" |
 | Database HTML export readable by crawlers; lossless re-import | ✅ | ✅ | U database "exports a crawlable table…" |
 | Collaboration on databases | rows merge independently; schema and views are last-writer-wins | 🟡 | U database "concurrent edits…" |
-| Relations, rollups, formulas | — | ❌ | — |
-| Calendar and timeline views | — | ❌ | — |
-| Row templates, synced / linked databases | — | ❌ | — |
-| Column drag-reorder and resize handles in the database table | widths only through the API | ❌ | — |
+| Formula properties | hand-written parser and evaluator (no `eval`), 20 functions, errors shown in the cell | ✅ | U database2 "formulas…"; B notion2 "formula property…" |
+| Relations and rollups | relation to a database of the same document, one-directional; rollup with any calculation | 🟡 (no two-way relations) | U database2 "relations…"; B notion2 "relation picker…" |
+| Custom property types | `registerDbPropertyType` (coerce, text, compare, render) | ✅ | U database2 "custom property types" |
+| Calendar and timeline views | month grid with per-day add; 28-day timeline with start / end properties. Dates are not changed by dragging | 🟡 | U database2 "calendar…"; B notion2 "calendar places rows…" |
+| Row templates, linked databases | — | ❌ | — |
+| Column drag-reorder and resize handles in the database table | ✅ (also "Move left / right" in the property menu) | ✅ | B notion2 "table columns resize…" |
+| Insert menu in the toolbar (every slash item, searchable) | ✅ | ✅ | B notion2 "toolbar Insert…" |
 | Table of contents block | live outline, click to jump | ✅ | U database "table of contents…"; B notion |
 | Bookmark (web preview) | host-supplied metadata | ✅ | U database "bookmarks…"; B notion |
 | Link to page / page mention (`[[`) | pages of the same document; follows renames | ✅ | U database "page links…"; B notion "[[ links…" |
@@ -257,7 +260,9 @@ Nothing here was compared against Notion side by side: **no parity is claimed**.
 | Template button | stores blocks, inserts fresh copies; "Save as template button" block action | ✅ | U database "template buttons…"; B notion |
 | Toggle headings | ✅ | ✅ | B notion |
 | Callouts, toggles, columns, simple tables, code, equations, embeds, files | see §4 | ✅ | — |
-| Synced blocks, breadcrumbs, nested sub-pages, comments on pages, page icons / covers | — | ❌ | — |
+| Synced blocks | read-only live copy of a block (one-way; the copy cannot be edited) | 🟡 | U database2 "synced copies"; B notion2 "a synced copy mirrors…" |
+| Nested sub-pages and breadcrumbs | `parent` on pages, indented tabs, breadcrumb trail | ✅ | U database2 "sub-pages"; B notion2 "sub-pages nest…" |
+| Comments on pages, page icons / covers | — | ❌ | — |
 
 ## 6. Known gaps and limitations
 
@@ -266,8 +271,9 @@ Nothing here was compared against Notion side by side: **no parity is claimed**.
   table row resizing and hover add-buttons, emoticon conversion, speech-to-text, autocomplete,
   drawing/poll/sticky/date/ruby nodes, Dragon support, a devtools browser extension, Prism/Shiki
   adapters, a cross-document template gallery.
-- Databases: no relations, rollups, formulas, calendar / timeline views or synced databases; see
-  docs/databases.md for the full list and for what merges in collaboration.
+- Databases: no two-way relations, nested filter groups, linked databases or row templates;
+  timeline / calendar items cannot be dragged to change dates; rows are not virtualized; cells of
+  one row and the schema are last-writer-wins in collaboration. See docs/databases.md.
 - Equations render through a host-supplied function; without it the LaTeX source is shown.
 - Suggestions track inline text only.
 - No virtualized rendering; see docs/benchmarks.md for where large documents slow down.

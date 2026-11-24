@@ -85,10 +85,13 @@ Theme with CSS variables — no selectors to override:
 
 ## Databases and workspace blocks
 
-Notion-style structures are built in: **databases** with typed properties, saved table / board /
-list / gallery views, filters, sorts, grouping and column calculations — where every row is a
-page with its own content — plus a live **table of contents**, **bookmarks**, **page links**
-(`[[`), **date chips**, **template buttons** and **toggle headings**.
+Notion-style structures are built in: **databases** with typed properties (including
+**formulas**, **relations**, **rollups** and your own property types), saved table / board / list /
+gallery / calendar / timeline views, filters, sorts, grouping and column calculations — where
+every row is a page with its own content — plus a live **table of contents**, **bookmarks**,
+**page links** (`[[`), **date chips**, **template buttons**, **toggle headings**, **synced
+copies** and nested **sub-pages** with breadcrumbs. Everything in the slash menu is also in the
+toolbar's searchable **Insert** menu.
 
 ```js
 z.commands.insertDatabase('board', {

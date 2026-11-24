@@ -1,6 +1,6 @@
 # Progress / resume notes
 
-_Last updated: 2026-11-24, end of session 2._
+_Last updated: 2026-11-25, end of session 3._
 
 ## State
 
@@ -17,16 +17,17 @@ failing. npm publication has **not** been done (owner action).
 | Added on request: multi-page documents (page tabs, sheet view, page breaks) | done |
 | Added on request: SEO / SSR rendering, tree-shakeable packaging, performance work | done |
 | Added on request (session 2): Notion-style databases (table / board / list / gallery, typed properties, filters, sorts, grouping, calculations, rows as pages) and workspace blocks (table of contents, bookmarks, page links, dates, template buttons, toggle headings) | done — see docs/databases.md |
+| Added on request (session 3): formula / relation / rollup properties, custom property types, calendar and timeline views, match-any filters, column resize and drag reorder, card reordering, redesigned database UI and scrollbars, toolbar Insert menu, sub-pages with breadcrumbs, synced copies | done — see docs/databases.md |
 
 Per-capability status, evidence and the list of known gaps: [FEATURE_MATRIX.md](FEATURE_MATRIX.md).
 
-## Last verified results (this machine, 2026-11-24)
+## Last verified results (this machine, 2026-11-25)
 
 | Check | Command | Result |
 | --- | --- | --- |
 | Type check | `pnpm typecheck` | clean |
-| Unit + randomized + collaboration | `pnpm test` | 96 passed |
-| Browser | `pnpm test:browser` | 176 passed, 4 skipped, 0 failed (60 tests × Chromium, Firefox, WebKit; skips are the CDP IME test and the OS-clipboard test outside Chromium) |
+| Unit + randomized + collaboration | `pnpm test` | 103 passed |
+| Browser | `pnpm test:browser` | 203 passed, 4 skipped, 0 failed (69 tests × Chromium, Firefox, WebKit; skips are the CDP IME test and the OS-clipboard test outside Chromium) |
 | Packed release | `pnpm pack:verify` | 10 / 10 checks passed (`docs/pack-verify.json`) |
 | Benchmarks | `pnpm bench` | `docs/benchmarks.md` |
 
@@ -60,11 +61,13 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
    test. Add `ws` as a dev dependency, an `examples/collab-server`, and a Playwright test that
    uses `webSocketTransport` with two pages. Also exercise `broadcastChannelTransport` with two
    pages of one browser context.
-4. **Databases, next steps** (docs/databases.md "Not implemented"): relations / rollups /
-   formulas, calendar and timeline views, AND/OR filter groups, reordering cards inside a board
-   column, column drag-reorder and resize handles, row virtualization, and finer-grained
-   collaboration (cells of one row and the schema are last-writer-wins today — moving cells and
-   properties into their own shared maps in `collab.ts` would fix that).
+4. **Databases, next steps** (docs/databases.md "Not implemented"): finer-grained
+   collaboration (cells of one row and the schema are still last-writer-wins — moving cells and
+   properties into their own shared maps in `collab.ts` would fix that), row virtualization,
+   two-way relations, nested filter groups, linked databases, row templates, dragging calendar
+   cards / timeline bars to change dates, editable (two-way) synced blocks.
+   Bundle: databases are still part of the base bundle, which grew from 84.9 to 95.7 kB gzipped
+   in session 3 (style.css 6.8 → 9.3 kB); splitting them into an optional entry is the fix.
    Templates: template buttons exist; a cross-document template gallery does not.
 5. **Equation rendering** — ship an optional `@z-packages/zeditor/katex` entry that lazy-loads
    KaTeX and sets `renderMath`, plus a test.
@@ -97,7 +100,14 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
   block handle positioning).
 - Database rows must stay in document order in the DOM (the reconciler owns child order):
   view order, filtering and board columns are done with CSS `order` / `hidden` /
-  `grid-column` in `view/notion-render.ts`. Do not move row elements between containers.
+  `grid-column` / `grid-row` in `view/database-render.ts` (styles in `src/database.css`). Do not
+  move row elements between containers. Board cards are packed per lane by measuring them into
+  4px grid tracks; calendar / timeline / lane backgrounds are decoration elements without
+  `data-zid`, which the reconciler skips.
+- Database rows are paint-contained (`content-visibility`): anything wider than the row box is
+  clipped, so the table body must be `min-width: max-content`.
+- `scripts/shots-db.mjs <dir>` screenshots every database view in the playground; look at the
+  pictures after touching `database.css`.
 - WebKit will not type into content that was `display: none` when the selection was set, even
   after it becomes visible: show the content, flush layout, then call
   `view.syncSelectionToDOM(true)` (which re-writes the selection even if it looks unchanged).

@@ -21,23 +21,38 @@ try {
   await page.reload();
   await page.waitForSelector('.z-database');
   const db = page.locator('.z-database');
-  await db.scrollIntoViewIfNeeded();
-  await page.evaluate(() => document.querySelector('.z-database').scrollIntoView({ block: 'start' }));
-  await page.evaluate(() => document.querySelector('.z-scroll').scrollBy(0, -160));
+  const frame = async (name) => {
+    await page.evaluate(() => {
+      const sc = document.querySelector('.z-scroll');
+      const d = document.querySelector('.z-database');
+      sc.scrollTop += d.getBoundingClientRect().top - sc.getBoundingClientRect().top - 12;
+    });
+    await page.waitForTimeout(250);
+    await page.screenshot({ path: resolve(out, name) });
+  };
+  const addView = async (name) => {
+    await db.getByRole('button', { name: 'Add view' }).click();
+    await page.getByRole('menu', { name: 'Add view' }).getByRole('menuitem', { name: new RegExp('^' + name) }).click();
+  };
   await page.locator('.z-db-colhead', { hasText: 'Points' }).click();
   await page.getByRole('dialog').getByLabel('Calculate').selectOption('sum');
   await page.keyboard.press('Escape');
-  await page.locator('.z-db-row').nth(1).hover();
-  await page.locator('.z-db-row').nth(1).getByRole('button', { name: 'Open' }).click();
-  await page.keyboard.type('Each row is a page: this text lives inside the row.');
+  await frame('db-table.png');
+  await db.getByRole('button', { name: 'Add property' }).click();
   await page.waitForTimeout(150);
-  await page.screenshot({ path: resolve(out, 'db-table.png') });
-  await db.getByLabel('Add view').selectOption('board');
+  await page.screenshot({ path: resolve(out, 'db-add-property.png') });
+  await page.keyboard.press('Escape');
+  await addView('Board');
+  await frame('db-board.png');
+  await addView('Gallery');
+  await frame('db-gallery.png');
+  await addView('Calendar');
+  await frame('db-calendar.png');
+  await addView('Timeline');
+  await frame('db-timeline.png');
+  await page.locator('.z-tool-insert').click();
   await page.waitForTimeout(150);
-  await page.screenshot({ path: resolve(out, 'db-board.png') });
-  await db.getByLabel('Add view').selectOption('gallery');
-  await page.waitForTimeout(150);
-  await page.screenshot({ path: resolve(out, 'db-gallery.png') });
+  await page.screenshot({ path: resolve(out, 'insert-menu.png') });
   await browser.close();
   console.log('errors:', JSON.stringify(errors));
 } finally {

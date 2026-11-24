@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-24T18:08:32.247Z",
+  "date": "2026-11-24T19:06:39.956Z",
   "hardware": {
     "cpu": "AMD Ryzen 7 5800H with Radeon Graphics",
     "cores": 16,
@@ -10,278 +10,278 @@
   },
   "model": {
     "1000": {
-      "loadMs": 11.1,
+      "loadMs": 10.3,
       "typeMs": {
         "median": 0.02,
-        "p95": 0.066,
-        "max": 1.688,
+        "p95": 0.057,
+        "max": 1.625,
         "n": 300
       },
       "splitBlockMs": {
-        "median": 0.022,
-        "p95": 0.079,
-        "max": 5.04,
+        "median": 0.02,
+        "p95": 0.069,
+        "max": 4.555,
         "n": 100
       },
       "moveBlockMs": {
-        "median": 0.026,
-        "p95": 0.059,
-        "max": 0.58,
+        "median": 0.024,
+        "p95": 0.05,
+        "max": 0.487,
         "n": 100
       },
-      "serializeJsonMs": 2.9,
+      "serializeJsonMs": 2.6,
       "jsonKB": 248,
-      "toHtmlMs": 3.5,
-      "importHtmlMs": 37.4,
-      "undoMs": 0.027
+      "toHtmlMs": 3.1,
+      "importHtmlMs": 33.8,
+      "undoMs": 0.025
     },
     "5000": {
-      "loadMs": 26.1,
+      "loadMs": 22.5,
       "typeMs": {
         "median": 0.015,
-        "p95": 0.036,
-        "max": 1.681,
+        "p95": 0.031,
+        "max": 3.039,
         "n": 300
       },
       "splitBlockMs": {
-        "median": 0.053,
-        "p95": 0.082,
-        "max": 0.156,
+        "median": 0.046,
+        "p95": 0.081,
+        "max": 0.168,
         "n": 100
       },
       "moveBlockMs": {
-        "median": 0.052,
-        "p95": 0.079,
-        "max": 0.126,
+        "median": 0.048,
+        "p95": 0.07,
+        "max": 0.097,
         "n": 100
       },
-      "serializeJsonMs": 12.6,
+      "serializeJsonMs": 11.9,
       "jsonKB": 1226,
-      "toHtmlMs": 7.2,
-      "importHtmlMs": 111.7,
-      "undoMs": 0.064
+      "toHtmlMs": 6.6,
+      "importHtmlMs": 110.3,
+      "undoMs": 0.061
     },
     "20000": {
-      "loadMs": 86.2,
+      "loadMs": 81.9,
       "typeMs": {
-        "median": 0.014,
-        "p95": 0.029,
-        "max": 0.082,
+        "median": 0.013,
+        "p95": 0.028,
+        "max": 0.054,
         "n": 300
       },
       "splitBlockMs": {
-        "median": 0.202,
-        "p95": 0.235,
-        "max": 0.695,
+        "median": 0.196,
+        "p95": 0.243,
+        "max": 0.682,
         "n": 100
       },
       "moveBlockMs": {
-        "median": 0.214,
-        "p95": 0.248,
-        "max": 0.269,
+        "median": 0.209,
+        "p95": 0.264,
+        "max": 0.437,
         "n": 100
       },
-      "serializeJsonMs": 48.3,
+      "serializeJsonMs": 47.4,
       "jsonKB": 4892,
-      "toHtmlMs": 39.7,
-      "importHtmlMs": 374.5,
-      "undoMs": 0.189
+      "toHtmlMs": 36,
+      "importHtmlMs": 361.8,
+      "undoMs": 0.181
     }
   },
   "browser": {
     "1000": {
-      "mountMs": 27.5,
+      "mountMs": 25.5,
       "typing": {
         "handlerMs": {
           "median": 0.9,
-          "p95": 1.5,
-          "max": 5,
+          "p95": 1.2,
+          "max": 2.5,
           "n": 100
         },
         "toNextFrameMs": {
-          "median": 16.7,
+          "median": 16.5,
           "p95": 18.6,
-          "max": 25.6,
+          "max": 20.9,
           "n": 100
         }
       },
       "selectionChange": {
         "handlerMs": {
           "median": 1.2,
-          "p95": 1.7,
-          "max": 2,
+          "p95": 2.3,
+          "max": 2.4,
           "n": 60
-        },
-        "toNextFrameMs": {
-          "median": 16.7,
-          "p95": 18.4,
-          "max": 19.2,
-          "n": 60
-        }
-      },
-      "moveBlock": {
-        "handlerMs": {
-          "median": 2.2,
-          "p95": 4.6,
-          "max": 26.5,
-          "n": 40
-        },
-        "toNextFrameMs": {
-          "median": 16.5,
-          "p95": 23.2,
-          "max": 38.4,
-          "n": 40
-        }
-      },
-      "paste200Paragraphs": {
-        "handlerMs": {
-          "median": 14.2,
-          "p95": 43.4,
-          "max": 43.4,
-          "n": 5
-        },
-        "toNextFrameMs": {
-          "median": 37.8,
-          "p95": 55.5,
-          "max": 55.5,
-          "n": 5
-        }
-      },
-      "domNodes": 7265
-    },
-    "5000": {
-      "mountMs": 74,
-      "typing": {
-        "handlerMs": {
-          "median": 3,
-          "p95": 7,
-          "max": 12.5,
-          "n": 100
         },
         "toNextFrameMs": {
           "median": 16.8,
-          "p95": 27.6,
-          "max": 57.6,
-          "n": 100
-        }
-      },
-      "selectionChange": {
-        "handlerMs": {
-          "median": 5.1,
-          "p95": 9.6,
-          "max": 15.3,
-          "n": 60
-        },
-        "toNextFrameMs": {
-          "median": 27.6,
-          "p95": 38.9,
-          "max": 44.6,
+          "p95": 18.7,
+          "max": 22.5,
           "n": 60
         }
       },
       "moveBlock": {
         "handlerMs": {
-          "median": 7.7,
-          "p95": 13,
-          "max": 101.4,
+          "median": 1.9,
+          "p95": 2.8,
+          "max": 21.8,
           "n": 40
         },
         "toNextFrameMs": {
-          "median": 23.5,
-          "p95": 33.6,
-          "max": 131,
+          "median": 16.8,
+          "p95": 18.6,
+          "max": 28.4,
           "n": 40
         }
       },
       "paste200Paragraphs": {
         "handlerMs": {
-          "median": 22.2,
-          "p95": 122.1,
-          "max": 122.1,
+          "median": 25.5,
+          "p95": 135.6,
+          "max": 135.6,
           "n": 5
         },
         "toNextFrameMs": {
-          "median": 100.2,
-          "p95": 168.5,
-          "max": 168.5,
+          "median": 44.7,
+          "p95": 155.5,
+          "max": 155.5,
           "n": 5
         }
       },
-      "domNodes": 19487
+      "domNodes": 7273
     },
-    "20000": {
-      "mountMs": 261.7,
+    "5000": {
+      "mountMs": 70.2,
       "typing": {
         "handlerMs": {
-          "median": 11.6,
-          "p95": 15.5,
-          "max": 24.2,
+          "median": 3.1,
+          "p95": 6.4,
+          "max": 10.3,
           "n": 100
         },
         "toNextFrameMs": {
-          "median": 50.8,
-          "p95": 79.9,
-          "max": 187.7,
+          "median": 16.9,
+          "p95": 30,
+          "max": 56.9,
           "n": 100
         }
       },
       "selectionChange": {
         "handlerMs": {
-          "median": 17.9,
-          "p95": 23.5,
-          "max": 51.2,
+          "median": 4.3,
+          "p95": 6.1,
+          "max": 7.7,
           "n": 60
         },
         "toNextFrameMs": {
-          "median": 113.5,
-          "p95": 145.6,
-          "max": 168.4,
+          "median": 22.3,
+          "p95": 32.6,
+          "max": 36.4,
           "n": 60
         }
       },
       "moveBlock": {
         "handlerMs": {
-          "median": 31.8,
-          "p95": 40.5,
-          "max": 409.2,
+          "median": 6.8,
+          "p95": 9,
+          "max": 95.8,
           "n": 40
         },
         "toNextFrameMs": {
-          "median": 96.7,
-          "p95": 138.7,
-          "max": 590.6,
+          "median": 17.8,
+          "p95": 28.1,
+          "max": 125.5,
           "n": 40
         }
       },
       "paste200Paragraphs": {
         "handlerMs": {
-          "median": 38,
-          "p95": 397.6,
-          "max": 397.6,
+          "median": 20.8,
+          "p95": 109.5,
+          "max": 109.5,
           "n": 5
         },
         "toNextFrameMs": {
-          "median": 243.7,
-          "p95": 550.8,
-          "max": 550.8,
+          "median": 80.9,
+          "p95": 145.3,
+          "max": 145.3,
           "n": 5
         }
       },
-      "domNodes": 65281
+      "domNodes": 19495
+    },
+    "20000": {
+      "mountMs": 279.2,
+      "typing": {
+        "handlerMs": {
+          "median": 14.8,
+          "p95": 38.2,
+          "max": 45.8,
+          "n": 100
+        },
+        "toNextFrameMs": {
+          "median": 64.4,
+          "p95": 135.8,
+          "max": 299.9,
+          "n": 100
+        }
+      },
+      "selectionChange": {
+        "handlerMs": {
+          "median": 16.3,
+          "p95": 22.1,
+          "max": 26.9,
+          "n": 60
+        },
+        "toNextFrameMs": {
+          "median": 103.9,
+          "p95": 146.4,
+          "max": 167.5,
+          "n": 60
+        }
+      },
+      "moveBlock": {
+        "handlerMs": {
+          "median": 35,
+          "p95": 80,
+          "max": 376.7,
+          "n": 40
+        },
+        "toNextFrameMs": {
+          "median": 108.1,
+          "p95": 294.8,
+          "max": 498.1,
+          "n": 40
+        }
+      },
+      "paste200Paragraphs": {
+        "handlerMs": {
+          "median": 40.1,
+          "p95": 399.2,
+          "max": 399.2,
+          "n": 5
+        },
+        "toNextFrameMs": {
+          "median": 261.4,
+          "p95": 561,
+          "max": 561,
+          "n": 5
+        }
+      },
+      "domNodes": 65289
     }
   },
   "bundles": {
     "headless core (createHeadlessEditor + serializers)": {
-      "minKB": 130.1,
-      "gzipKB": 42.1
+      "minKB": 142,
+      "gzipKB": 46.1
     },
     "base editor with default UI (createEditor)": {
-      "minKB": 261.4,
-      "gzipKB": 84.9
+      "minKB": 294.3,
+      "gzipKB": 95.7
     },
     "style.css": {
-      "minKB": 32.7,
-      "gzipKB": 6.8
+      "minKB": 48.8,
+      "gzipKB": 9.3
     },
     "optional: code-highlight (added on top of base)": {
       "minKB": 6.2,
@@ -289,7 +289,7 @@
     },
     "optional: react adapter (added on top of base, react external)": {
       "minKB": 2.3,
-      "gzipKB": 1
+      "gzipKB": 0.9
     },
     "optional: vue adapter (added on top of base, vue external)": {
       "minKB": 2.6,
@@ -300,8 +300,8 @@
       "gzipKB": 6
     },
     "no-build file: zeditor.browser.js (editor + UI + highlighting)": {
-      "minKB": 292.3,
-      "gzipKB": 96.1
+      "minKB": 325.6,
+      "gzipKB": 107
     },
     "no-build file: zeditor.collab.browser.js (includes Yjs)": {
       "minKB": 111.2,

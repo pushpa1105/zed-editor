@@ -13,6 +13,10 @@ const TASKS = `
     rows: [{ Name: 'Design', Status: 'Done', Points: 3, Shipped: true }, { Name: 'Build API', Status: 'Doing', Points: 8 }, { Name: 'Write docs', Status: 'To do', Points: 2 }],
   })];`;
 const db = (page: Page) => page.locator('#a .z-database');
+async function addView(page: Page, name: string) {
+  await db(page).getByRole('button', { name: 'Add view' }).click();
+  await page.getByRole('menu', { name: 'Add view' }).getByRole('menuitem', { name: new RegExp('^' + name) }).click();
+}
 /** Type into a control that lives inside the editable area with real key events (see docs/testing.md on `fill`). */
 async function typeInto(page: Page, target: import('@playwright/test').Locator, text: string, commit: string | null = 'Tab') {
   await target.click();
@@ -40,7 +44,7 @@ test.describe('databases', () => {
     await open(page, { content: [p('', 'a')], mode: 'block' });
     await root(page).click();
     await page.keyboard.type('/database');
-    await expect(page.locator('#a .z-typeahead .z-menu-item')).toHaveCount(4);
+    await expect(page.locator('#a .z-typeahead .z-menu-item')).toHaveCount(6); // table, board, list, gallery, calendar, timeline
     await page.keyboard.press('Enter');
     await expect(db(page)).toBeVisible();
     await expect(db(page)).toHaveAttribute('data-view', 'table');
@@ -75,7 +79,7 @@ test.describe('databases', () => {
     await page.keyboard.press('Escape');
     await expect(page.locator('#a .z-db-row').nth(0).locator('.z-db-cell[data-type="multi_select"] .z-db-chip')).toHaveText(['urgent', 'ui']);
     // rows
-    await db(page).getByRole('button', { name: '+ New' }).click();
+    await page.locator('#a .z-db-foot .z-db-new').click();
     await page.keyboard.type('Added');
     await page.keyboard.press('Tab');
     await expect(page.locator('#a .z-db-row')).toHaveCount(4);
@@ -92,10 +96,13 @@ test.describe('databases', () => {
 
   test('properties: add, rename, change type, hide, calculate', async ({ page }) => {
     await open(page, {}, TASKS);
+    // "+" lists every property type; picking one adds it and opens its settings
     await db(page).getByRole('button', { name: 'Add property' }).click();
+    await expect(page.getByRole('menu', { name: 'Add property' }).getByRole('menuitem')).toHaveCount(12);
+    await page.getByRole('menuitem', { name: /^Text/ }).click();
     await expect(page.locator('#a .z-db-colhead[data-prop]')).toHaveCount(5);
-    await page.locator('#a .z-db-colhead[data-prop]').nth(4).click();
     const menu = page.getByRole('dialog');
+    await expect(menu.getByLabel('Rename')).toBeVisible();
     await menu.getByLabel('Rename').fill('Owner');
     await menu.getByLabel('Rename').press('Tab');
     await menu.getByLabel('Type').selectOption('person');
@@ -150,7 +157,7 @@ test.describe('databases', () => {
 
   test('views: board groups by status and dragging a card changes it; list and gallery render', async ({ page }) => {
     await open(page, {}, TASKS);
-    await db(page).getByLabel('Add view').selectOption('board');
+    await addView(page, 'Board');
     await expect(db(page)).toHaveAttribute('data-view', 'board');
     await expect(page.locator('#a .z-db-group')).toHaveCount(4); // no value + 3 options
     const colOf = (title: string) =>
@@ -178,16 +185,18 @@ test.describe('databases', () => {
     await page.mouse.up();
     await expect.poll(() => colOf('Write docs')).toBe('Done');
     const m = await model(page);
-    expect(m.rows[2][m.props[1].id]).toBe('done');
+    expect(m.rows.find((r: any) => r.title === 'Write docs')[m.props[1].id]).toBe('done');
+    // it was dropped on the upper half of the "Design" card: reordered in front of it
+    expect(m.rows.map((r: any) => r.title)).toEqual(['Write docs', 'Design', 'Build API']);
     expect(m.views.map((v: any) => v.type)).toEqual(['table', 'board']);
     // the original table view is untouched and still selectable (keyboard: arrow + Enter)
     await db(page).getByRole('tab', { name: 'Table' }).click();
     await expect(db(page)).toHaveAttribute('data-view', 'table');
-    await db(page).getByLabel('Add view').selectOption('gallery');
+    await addView(page, 'Gallery');
     await expect(db(page)).toHaveAttribute('data-view', 'gallery');
-    await db(page).getByLabel('Add view').selectOption('list');
+    await addView(page, 'List');
     await expect(db(page)).toHaveAttribute('data-view', 'list');
-    expect(await visibleTitles(page)).toEqual(['Design', 'Build API', 'Write docs']);
+    expect(await visibleTitles(page)).toEqual(['Write docs', 'Design', 'Build API']);
     await expect(db(page).getByRole('tab')).toHaveCount(4);
     await noErrors(page);
   });
@@ -219,7 +228,7 @@ test.describe('databases', () => {
 
   test('read-only databases cannot be edited', async ({ page }) => {
     await open(page, { readOnly: true }, TASKS);
-    await expect(db(page).getByRole('button', { name: '+ New' })).toHaveCount(0);
+    await expect(page.locator('#a .z-db-new, #a .z-db-newbtn')).toHaveCount(0);
     await expect(db(page).getByRole('button', { name: 'Filter' })).toHaveCount(0);
     await expect(page.locator('#a .z-db-row').first().getByLabel('Name')).toHaveAttribute('readonly', '');
     await expect(page.locator('#a .z-db-row').first().getByRole('checkbox')).toBeDisabled();

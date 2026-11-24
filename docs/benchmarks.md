@@ -14,9 +14,9 @@ Each document is a mix of paragraphs with formatted runs (~70 %), list items (~2
 
 | Blocks | JSON size | DOM elements |
 | ---: | ---: | ---: |
-| 1,000 | 248 kB | 7,265 |
-| 5,000 | 1,226 kB | 19,487 |
-| 20,000 | 4,892 kB | 65,281 |
+| 1,000 | 248 kB | 7,273 |
+| 5,000 | 1,226 kB | 19,495 |
+| 20,000 | 4,892 kB | 65,289 |
 
 ## Engine only (Node, no DOM)
 
@@ -24,9 +24,9 @@ Milliseconds per operation, median / p95 where sampled.
 
 | Blocks | Load + validate | Type a character | Split block | Move block | Undo step | Serialize JSON | Export HTML | Import that HTML |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1,000 | 11.1 | 0.02 / 0.066 | 0.022 / 0.079 | 0.026 / 0.059 | 0.027 | 2.9 | 3.5 | 37.4 |
-| 5,000 | 26.1 | 0.015 / 0.036 | 0.053 / 0.082 | 0.052 / 0.079 | 0.064 | 12.6 | 7.2 | 111.7 |
-| 20,000 | 86.2 | 0.014 / 0.029 | 0.202 / 0.235 | 0.214 / 0.248 | 0.189 | 48.3 | 39.7 | 374.5 |
+| 1,000 | 10.3 | 0.02 / 0.057 | 0.02 / 0.069 | 0.024 / 0.05 | 0.025 | 2.6 | 3.1 | 33.8 |
+| 5,000 | 22.5 | 0.015 / 0.031 | 0.046 / 0.081 | 0.048 / 0.07 | 0.061 | 11.9 | 6.6 | 110.3 |
+| 20,000 | 81.9 | 0.013 / 0.028 | 0.196 / 0.243 | 0.209 / 0.264 | 0.181 | 47.4 | 36 | 361.8 |
 
 ## In the browser (Chromium, headless)
 
@@ -37,9 +37,9 @@ Two numbers per operation, each as median / p95 in milliseconds:
 
 | Blocks | Mount | Typing: handler | Typing: to next frame | Selection change: handler | to next frame | Move block: handler | to next frame | Paste 200 paragraphs (HTML): handler | to next frame |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1,000 | 27.5 | 0.9 / 1.5 | 16.7 / 18.6 | 1.2 / 1.7 | 16.7 / 18.4 | 2.2 / 4.6 | 16.5 / 23.2 | 14.2 / 43.4 | 37.8 / 55.5 |
-| 5,000 | 74 | 3 / 7 | 16.8 / 27.6 | 5.1 / 9.6 | 27.6 / 38.9 | 7.7 / 13 | 23.5 / 33.6 | 22.2 / 122.1 | 100.2 / 168.5 |
-| 20,000 | 261.7 | 11.6 / 15.5 | 50.8 / 79.9 | 17.9 / 23.5 | 113.5 / 145.6 | 31.8 / 40.5 | 96.7 / 138.7 | 38 / 397.6 | 243.7 / 550.8 |
+| 1,000 | 25.5 | 0.9 / 1.2 | 16.5 / 18.6 | 1.2 / 2.3 | 16.8 / 18.7 | 1.9 / 2.8 | 16.8 / 18.6 | 25.5 / 135.6 | 44.7 / 155.5 |
+| 5,000 | 70.2 | 3.1 / 6.4 | 16.9 / 30 | 4.3 / 6.1 | 22.3 / 32.6 | 6.8 / 9 | 17.8 / 28.1 | 20.8 / 109.5 | 80.9 / 145.3 |
+| 20,000 | 279.2 | 14.8 / 38.2 | 64.4 / 135.8 | 16.3 / 22.1 | 103.9 / 146.4 | 35 / 80 | 108.1 / 294.8 | 40.1 / 399.2 | 261.4 / 561 |
 
 Typing is dispatched as a real `beforeinput` event. Selection changes jump between blocks; moves relocate a top-level block; the paste goes through the HTML importer.
 
@@ -57,14 +57,14 @@ Minified and gzipped, as an application bundler would ship them (esbuild, peer d
 
 | Import | Minified | Gzipped |
 | --- | ---: | ---: |
-| headless core (createHeadlessEditor + serializers) | 130.1 kB | 42.1 kB |
-| base editor with default UI (createEditor) | 261.4 kB | 84.9 kB |
-| style.css | 32.7 kB | 6.8 kB |
+| headless core (createHeadlessEditor + serializers) | 142 kB | 46.1 kB |
+| base editor with default UI (createEditor) | 294.3 kB | 95.7 kB |
+| style.css | 48.8 kB | 9.3 kB |
 | optional: code-highlight (added on top of base) | 6.2 kB | 2.5 kB |
-| optional: react adapter (added on top of base, react external) | 2.3 kB | 1 kB |
+| optional: react adapter (added on top of base, react external) | 2.3 kB | 0.9 kB |
 | optional: vue adapter (added on top of base, vue external) | 2.6 kB | 1 kB |
 | optional: collab (yjs + y-protocols external) | 14.3 kB | 6 kB |
-| no-build file: zeditor.browser.js (editor + UI + highlighting) | 292.3 kB | 96.1 kB |
+| no-build file: zeditor.browser.js (editor + UI + highlighting) | 325.6 kB | 107 kB |
 | no-build file: zeditor.collab.browser.js (includes Yjs) | 111.2 kB | 35.7 kB |
 
 The base bundle has no runtime dependencies. React, Vue, Yjs and y-protocols are optional peer dependencies and are never bundled into the ESM entry points.
