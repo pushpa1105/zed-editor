@@ -12,7 +12,10 @@ test.describe('block mode', () => {
     await expect(menu).toBeVisible();
     await expect(root(page)).toHaveAttribute('aria-activedescendant', /z-ta-/);
     await page.keyboard.type('head');
-    await expect(menu.locator('.z-menu-item')).toHaveCount(3);
+    // items whose title starts with the query rank first (toggle headings and the outline also match)
+    await expect(menu.locator('.z-menu-item .z-menu-title').nth(0)).toHaveText('Heading 1');
+    await expect(menu.locator('.z-menu-item .z-menu-title').nth(1)).toHaveText('Heading 2');
+    await expect(menu.locator('.z-menu-item .z-menu-title').nth(2)).toHaveText('Heading 3');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     await expect(menu).toBeHidden();

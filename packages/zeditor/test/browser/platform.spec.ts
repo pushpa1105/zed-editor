@@ -340,7 +340,7 @@ test.describe('instances and lifecycle', () => {
   test('autosave status, draft recovery after a "crash", and block links', async ({ page }) => {
     await open(page, { content: [p('start', 'a'), p('target block', 'deep')], ui: { statusBar: true } }, `
       window.saves = [];
-      o.autosave = { debounce: 50, draftKey: 'draft-test', save: (doc) => new Promise((resolve, reject) => window.saves.push({ doc, resolve, reject })) };`);
+      o.autosave = { debounce: 50, retryDelays: [60000], draftKey: 'draft-test', save: (doc) => new Promise((resolve, reject) => window.saves.push({ doc, resolve, reject })) };`);
     const status = page.locator('#a .z-status-save');
     await setSel(page, 'a', 5);
     await page.keyboard.type(' typing');

@@ -1385,7 +1385,16 @@ export const pagesExtension: Extension = {
     renamePage: (editor, id: string, title: string) => {
       const page = editor.doc.get(id);
       if (editor.readOnly || !page || page.type !== 'page') return false;
-      return editor.update((tr) => void tr.setAttrs(id, { title: String(title).slice(0, 200) }));
+      const next = String(title).slice(0, 200);
+      return editor.update((tr) => {
+        tr.setAttrs(id, { title: next });
+        for (const b of [...editor.doc.descendants()]) {
+          if (!b.content?.some((c) => 'atom' in c && c.atom === 'page_link' && c.attrs?.page === id)) continue;
+          const content = b.content.map((c) => ('atom' in c && c.atom === 'page_link' && c.attrs?.page === id ? { ...c, attrs: { ...c.attrs, title: next } } : c));
+          tr.step({ t: 'text', id: b.id, from: 0, to: b.length, insert: content });
+        }
+        tr.select(editor.selection);
+      });
     },
     movePage: (editor, id: string, index: number) => {
       const page = editor.doc.get(id);

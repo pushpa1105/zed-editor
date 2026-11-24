@@ -156,6 +156,10 @@ const ext: Extension = defineExtension({ name: 'x', commands: { hello: (editor: 
 const headless = createHeadlessEditor({ extensions: [ext, codeHighlightExtension()] });
 headless.commands.toggleMark('bold');
 headless.commands.insertTable(2, 2, { header: true });
+headless.commands.insertDatabase('board', { title: 'T', properties: [{ name: 'Name', type: 'title' }], rows: [{ Name: 'a' }] });
+headless.commands.dbSort('db', 'title', 'desc');
+// @ts-expect-error unknown view type
+headless.commands.dbAddView('db', 'pivot');
 // @ts-expect-error unknown alignment
 headless.commands.setAlign('diagonal');
 const doc: DocJSON = headless.getJSON();

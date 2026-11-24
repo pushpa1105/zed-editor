@@ -121,13 +121,23 @@ pages) or all of them as sheets (`paged`). "Page break" splits the current page 
 or inserts a `page_break` block in an unpaged document. Hidden pages are `display: none`, so a
 long document split into pages only pays layout for the visible one.
 
+## Databases
+
+A database is a container block whose children are `db_row` blocks; a row carries its cell
+values in `attrs.cells` and its page content as child blocks. Properties and saved views live
+in the database block's attrs. `queryDatabase` evaluates a view (filter, sort, group,
+calculate) as a pure function. The renderer keeps row elements in document order — as the
+reconciler requires — and expresses view order, filtering and board columns with CSS (`order`,
+`hidden`, `grid-column`), so switching views or sorting never moves DOM nodes or steals focus
+from a cell being edited. Details: [databases.md](./databases.md).
+
 ## Modules
 
 | path | role |
 | --- | --- |
-| `src/core/*` | model, schema, steps, selection, editor, commands, tables, HTML, Markdown, clipboard, built-in extensions |
+| `src/core/*` | model, schema, steps, selection, editor, commands, tables, HTML, Markdown, clipboard, built-in extensions, databases (`database.ts`), workspace blocks (`notion.ts`) |
 | `src/features/*` | counts, find/replace, comments, suggestions, versions, autosave, uploads |
-| `src/view/*` | EditorView, renderers, DOM helpers |
+| `src/view/*` | EditorView, renderers (`render.ts`, `notion-render.ts` for databases and workspace blocks), DOM helpers |
 | `src/ui/*` | toolbar, floating toolbar, menus, block handles, panels, icons |
 | `src/react.tsx`, `src/vue.ts` | adapters |
 | `src/collab.ts` | Yjs binding, presence, sync protocol, transports |

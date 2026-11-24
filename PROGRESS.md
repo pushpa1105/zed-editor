@@ -1,6 +1,6 @@
 # Progress / resume notes
 
-_Last updated: 2026-11-21, end of session 1._
+_Last updated: 2026-11-24, end of session 2._
 
 ## State
 
@@ -16,16 +16,17 @@ failing. npm publication has **not** been done (owner action).
 | 5. Feature matrix, browser compatibility, benchmarks, packed-release verification | done |
 | Added on request: multi-page documents (page tabs, sheet view, page breaks) | done |
 | Added on request: SEO / SSR rendering, tree-shakeable packaging, performance work | done |
+| Added on request (session 2): Notion-style databases (table / board / list / gallery, typed properties, filters, sorts, grouping, calculations, rows as pages) and workspace blocks (table of contents, bookmarks, page links, dates, template buttons, toggle headings) | done — see docs/databases.md |
 
 Per-capability status, evidence and the list of known gaps: [FEATURE_MATRIX.md](FEATURE_MATRIX.md).
 
-## Last verified results (this machine, 2026-11-21)
+## Last verified results (this machine, 2026-11-24)
 
 | Check | Command | Result |
 | --- | --- | --- |
 | Type check | `pnpm typecheck` | clean |
-| Unit + randomized + collaboration | `pnpm test` | 84 passed |
-| Browser | `pnpm test:browser` | 149 passed, 4 skipped, 0 failed (51 tests × Chromium, Firefox, WebKit; skips are the CDP IME test and the OS-clipboard test outside Chromium) |
+| Unit + randomized + collaboration | `pnpm test` | 96 passed |
+| Browser | `pnpm test:browser` | 176 passed, 4 skipped, 0 failed (60 tests × Chromium, Firefox, WebKit; skips are the CDP IME test and the OS-clipboard test outside Chromium) |
 | Packed release | `pnpm pack:verify` | 10 / 10 checks passed (`docs/pack-verify.json`) |
 | Benchmarks | `pnpm bench` | `docs/benchmarks.md` |
 
@@ -59,9 +60,12 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
    test. Add `ws` as a dev dependency, an `examples/collab-server`, and a Playwright test that
    uses `webSocketTransport` with two pages. Also exercise `broadcastChannelTransport` with two
    pages of one browser context.
-4. **Templates** — only `insertBlocks(json)` exists. Add a small template store adapter
-   (`save(name, blocks)`, `list()`), a "Save as template" block action and slash items generated
-   from stored templates.
+4. **Databases, next steps** (docs/databases.md "Not implemented"): relations / rollups /
+   formulas, calendar and timeline views, AND/OR filter groups, reordering cards inside a board
+   column, column drag-reorder and resize handles, row virtualization, and finer-grained
+   collaboration (cells of one row and the schema are last-writer-wins today — moving cells and
+   properties into their own shared maps in `collab.ts` would fix that).
+   Templates: template buttons exist; a cross-document template gallery does not.
 5. **Equation rendering** — ship an optional `@z-packages/zeditor/katex` entry that lazy-loads
    KaTeX and sets `renderMath`, plus a test.
 6. **Table polish** — row height resize, hover "+" buttons to add rows / columns, scroll shadow.
@@ -91,6 +95,12 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
 - In the view, reading layout (caret rect, block rect) inside a transaction forces a full
   layout on large documents. Keep such reads in `requestAnimationFrame` (see `scrollToSelection`,
   block handle positioning).
+- Database rows must stay in document order in the DOM (the reconciler owns child order):
+  view order, filtering and board columns are done with CSS `order` / `hidden` /
+  `grid-column` in `view/notion-render.ts`. Do not move row elements between containers.
+- WebKit will not type into content that was `display: none` when the selection was set, even
+  after it becomes visible: show the content, flush layout, then call
+  `view.syncSelectionToDOM(true)` (which re-writes the selection even if it looks unchanged).
 - Firefox ignores `clipboardData` on synthetic `ClipboardEvent`s; the browser tests fall back to
   the public `copyPayload` / `pasteData` API there (see `test/browser/rich.spec.ts`).
 - Playwright's `fill()` on an `<input>` nested in the editable area issues an editing command

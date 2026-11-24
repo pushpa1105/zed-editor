@@ -1,70 +1,70 @@
 {
-  "date": "2026-11-21T16:18:50.682Z",
+  "date": "2026-11-24T18:07:00.959Z",
   "tarball": "z-packages-zeditor-0.1.0.tgz",
   "checks": [
     {
       "name": "tarball contents",
       "ok": true,
-      "ms": 0,
-      "detail": "56 files"
+      "ms": 1,
+      "detail": "59 files"
     },
     {
       "name": "vanilla: install only the tarball",
       "ok": true,
-      "ms": 3966,
+      "ms": 5967,
       "detail": "node_modules: @z-packages"
     },
     {
       "name": "vanilla: no-build HTML example runs from node_modules in Chromium",
       "ok": true,
-      "ms": 897,
+      "ms": 1076,
       "detail": "mounted, typed, switched mode, saved and reloaded JSON, CSS applied, no console errors"
     },
     {
       "name": "node: headless ESM import, transform, validate, serialize",
       "ok": true,
-      "ms": 118,
+      "ms": 137,
       "detail": "ok heading,list,table"
     },
     {
       "name": "node: SSR-safe import of the DOM entry (no window access at import time)",
       "ok": true,
-      "ms": 107,
+      "ms": 121,
       "detail": "ok"
     },
     {
       "name": "types: install tarball with peers",
       "ok": true,
-      "ms": 12799,
+      "ms": 11410,
       "detail": "installed"
     },
     {
       "name": "types: a strict TypeScript project type-checks every public entry point",
       "ok": true,
-      "ms": 3317,
+      "ms": 3657,
       "detail": "tsc --strict passed (skipLibCheck off)"
     },
     {
       "name": "node: SSR-safe import of the React and Vue adapters; React renders on the server",
       "ok": true,
-      "ms": 250,
+      "ms": 264,
       "detail": "ok <div class=\"host\"></div>"
     },
     {
       "name": "react: example builds against the tarball",
       "ok": true,
-      "ms": 20957,
-      "detail": "built: index-CFa0aDjY.css, index-dN1tcBvb.js"
+      "ms": 24635,
+      "detail": "built: index-0m8nf-id.js, index-BaZkPQf2.css"
     },
     {
       "name": "vue-vuetify: example builds against the tarball",
       "ok": true,
-      "ms": 28133,
-      "detail": "built: index-DGuPOLOK.css, index-DOycPP7b.js"
+      "ms": 35241,
+      "detail": "built: index-BlukI-Y-.js, index-LT24Wdha.css"
     }
   ],
-  "files": 56,
-  "unpackedKB": 3517,
-  "packedKB": 901,
+  "files": 59,
+  "unpackedKB": 3946,
+  "packedKB": 1009,
   "ok": true
 }

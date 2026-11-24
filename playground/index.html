@@ -27,7 +27,7 @@
       .toggles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 10px; }
       .row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; align-items: center; }
       pre.out { background: #111827; color: #e5e7eb; padding: 10px; border-radius: 6px; overflow: auto; max-height: 340px; font-size: 11.5px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; }
-      [role=tab][aria-selected=true] { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+      .panel [role=tab][aria-selected=true] { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
       #custom-toolbar { display: flex; gap: 6px; padding: 8px; border: 1px dashed #9ca3af; border-radius: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
       #custom-toolbar button[aria-pressed=true] { background: #7c3aed; color: #fff; border-color: #7c3aed; }
       /* customization example: re-theme through CSS variables only */
@@ -80,7 +80,7 @@
       import * as Z from '@z-packages/zeditor';
       import { issueRefExtension, calloutExtension, SHARED_DOCUMENT } from '../examples/shared/extensions.js';
 
-      const FEATURES = ['lists', 'code', 'tables', 'layout', 'media', 'equation', 'mentions', 'hashtag', 'emoji', 'markdownShortcuts', 'autolink', 'pages', 'comments', 'suggestions'];
+      const FEATURES = ['lists', 'code', 'tables', 'layout', 'media', 'equation', 'mentions', 'hashtag', 'emoji', 'markdownShortcuts', 'autolink', 'pages', 'comments', 'suggestions', 'database', 'notion'];
       const $ = (id) => document.getElementById(id);
       const state = { features: Object.fromEntries(FEATURES.map((f) => [f, true])), tab: 'json', log: [] };
       const KEY = 'zeditor-playground';
@@ -99,6 +99,25 @@
             { id: 'r2', type: 'table_row', children: [{ id: 'k3', type: 'table_cell', children: [{ id: 'k3p', type: 'paragraph', content: [{ text: 'Paste from a spreadsheet' }] }] }, { id: 'k4', type: 'table_cell', children: [{ id: 'k4p', type: 'paragraph', content: [{ text: 'Select cells, Tab, merge' }] }] }] },
           ] },
           { id: 'co', type: 'callout', attrs: { tone: 'info', icon: 'ℹ️' }, children: [{ id: 'cop', type: 'paragraph', content: [{ text: 'Callouts, toggles and columns hold ordinary blocks. Click the icon to change the tone.' }] }] },
+          { id: 'hdb', type: 'heading', attrs: { level: 2 }, content: [{ text: 'A database' }] },
+          { id: 'toc', type: 'toc' },
+          Z.createDatabase(Z.createHeadlessEditor(), {
+            title: 'Launch tasks',
+            properties: [
+              { name: 'Task', type: 'title' },
+              { name: 'Status', type: 'select', options: [{ id: 'todo', name: 'To do', color: 'gray' }, { id: 'doing', name: 'In progress', color: 'blue' }, { id: 'done', name: 'Done', color: 'green' }] },
+              { name: 'Tags', type: 'multi_select', options: [{ id: 'ui', name: 'UI', color: 'pink' }, { id: 'docs', name: 'Docs', color: 'yellow' }, { id: 'infra', name: 'Infra', color: 'purple' }] },
+              { name: 'Points', type: 'number' },
+              { name: 'Due', type: 'date' },
+              { name: 'Shipped', type: 'checkbox' },
+            ],
+            rows: [
+              { Task: 'Design the toolbar', Status: 'Done', Tags: ['UI'], Points: 3, Due: '2026-11-02', Shipped: true },
+              { Task: 'Write the quick starts', Status: 'In progress', Tags: ['Docs'], Points: 5, Due: '2026-11-28' },
+              { Task: 'Set up the relay', Status: 'To do', Tags: ['Infra'], Points: 8 },
+              { Task: 'Polish the block handles', Status: 'In progress', Tags: ['UI', 'Docs'], Points: 2 },
+            ],
+          }),
           ...SHARED_DOCUMENT.blocks,
           { id: 'eq', type: 'equation', attrs: { tex: 'e^{i\\pi} + 1 = 0' } },
           { id: 'pz', type: 'paragraph', content: [{ text: 'Mixed scripts: नमस्ते दुनिया · שלום עולם · 👨‍👩‍👧‍👦 · é' }] },
@@ -135,6 +154,7 @@
           characterLimit: limit,
           mentions: { search: searchPeople },
           upload: fakeUpload,
+          linkPreview: async (url) => ({ title: new URL(url).hostname, description: 'Preview supplied by the host application for ' + url, site: new URL(url).hostname }),
           extensions: [Z.codeHighlightExtension(), issueRefExtension(), calloutExtension()],
           ui: ui === 'none' ? false : { statusBar: true, toolbar: ui === 'default' },
           autosave: { debounce: 600, draftKey: KEY + ':draft', save: async (doc) => { await new Promise((r) => setTimeout(r, 300)); localStorage.setItem(KEY, JSON.stringify(doc)); } },

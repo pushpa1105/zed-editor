@@ -18,6 +18,7 @@ import { createAutosave, createUploads, Autosave, AutosaveOptions, UploadHandler
 import { getPages, activePage } from './core/builtin';
 import { setIcons } from './ui/icons';
 import { h } from './view/dom';
+import type { LinkPreviewHandler } from './core/notion';
 
 export interface EditorState {
   mode: 'classic' | 'block';
@@ -131,6 +132,8 @@ export interface CreateEditorOptions extends HeadlessOptions, ViewOptions {
   autosave?: AutosaveOptions;
   /** render LaTeX into an element (e.g. with KaTeX). Without it equations show their source. */
   renderMath?: (tex: string, el: HTMLElement, display: boolean) => void;
+  /** resolve title / description / image for bookmarked links (the editor never fetches URLs itself) */
+  linkPreview?: LinkPreviewHandler;
   /** max height of the scroll area, e.g. '60vh' */
   maxHeight?: string;
   onChange?: (editor: Editor) => void;
@@ -168,6 +171,7 @@ export function createEditor(options: CreateEditorOptions): ZEditor {
       baseExtensions: options.baseExtensions ?? defaultExtensions(options.features, { mentions: options.mentions, characterLimit: options.characterLimit }),
     });
   if (options.renderMath) editor.storage.renderMath = options.renderMath;
+  if (options.linkPreview) editor.storage.linkPreview = options.linkPreview;
   const ui = options.ui === false ? null : { toolbar: true, floatingToolbar: true, slashMenu: 'block' as const, blockHandles: true, tableTools: true, find: true, statusBar: false, pageTabs: true, ...(options.ui ?? {}) };
 
   const theme = options.theme ?? 'light';

@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-21T16:18:17.880Z",
+  "date": "2026-11-24T18:08:32.247Z",
   "hardware": {
     "cpu": "AMD Ryzen 7 5800H with Radeon Graphics",
     "cores": 16,
@@ -10,260 +10,260 @@
   },
   "model": {
     "1000": {
-      "loadMs": 11,
+      "loadMs": 11.1,
       "typeMs": {
-        "median": 0.021,
-        "p95": 0.059,
-        "max": 1.58,
+        "median": 0.02,
+        "p95": 0.066,
+        "max": 1.688,
         "n": 300
       },
       "splitBlockMs": {
-        "median": 0.02,
-        "p95": 0.073,
-        "max": 5.002,
+        "median": 0.022,
+        "p95": 0.079,
+        "max": 5.04,
         "n": 100
       },
       "moveBlockMs": {
-        "median": 0.024,
-        "p95": 0.052,
-        "max": 0.551,
+        "median": 0.026,
+        "p95": 0.059,
+        "max": 0.58,
         "n": 100
       },
-      "serializeJsonMs": 3,
+      "serializeJsonMs": 2.9,
       "jsonKB": 248,
-      "toHtmlMs": 2.6,
-      "importHtmlMs": 33.7,
-      "undoMs": 0.026
+      "toHtmlMs": 3.5,
+      "importHtmlMs": 37.4,
+      "undoMs": 0.027
     },
     "5000": {
-      "loadMs": 24.7,
+      "loadMs": 26.1,
       "typeMs": {
-        "median": 0.016,
-        "p95": 0.028,
-        "max": 2.58,
+        "median": 0.015,
+        "p95": 0.036,
+        "max": 1.681,
         "n": 300
       },
       "splitBlockMs": {
-        "median": 0.052,
-        "p95": 0.149,
-        "max": 2.686,
+        "median": 0.053,
+        "p95": 0.082,
+        "max": 0.156,
         "n": 100
       },
       "moveBlockMs": {
-        "median": 0.049,
-        "p95": 0.075,
-        "max": 0.132,
+        "median": 0.052,
+        "p95": 0.079,
+        "max": 0.126,
         "n": 100
       },
-      "serializeJsonMs": 10.9,
+      "serializeJsonMs": 12.6,
       "jsonKB": 1226,
-      "toHtmlMs": 5.7,
-      "importHtmlMs": 102.9,
-      "undoMs": 0.066
+      "toHtmlMs": 7.2,
+      "importHtmlMs": 111.7,
+      "undoMs": 0.064
     },
     "20000": {
-      "loadMs": 91.6,
+      "loadMs": 86.2,
       "typeMs": {
-        "median": 0.009,
-        "p95": 0.016,
-        "max": 0.062,
+        "median": 0.014,
+        "p95": 0.029,
+        "max": 0.082,
         "n": 300
       },
       "splitBlockMs": {
-        "median": 0.159,
-        "p95": 0.288,
-        "max": 0.443,
+        "median": 0.202,
+        "p95": 0.235,
+        "max": 0.695,
         "n": 100
       },
       "moveBlockMs": {
-        "median": 0.172,
-        "p95": 0.208,
-        "max": 0.238,
+        "median": 0.214,
+        "p95": 0.248,
+        "max": 0.269,
         "n": 100
       },
-      "serializeJsonMs": 42.9,
+      "serializeJsonMs": 48.3,
       "jsonKB": 4892,
-      "toHtmlMs": 22.3,
-      "importHtmlMs": 355,
-      "undoMs": 0.174
+      "toHtmlMs": 39.7,
+      "importHtmlMs": 374.5,
+      "undoMs": 0.189
     }
   },
   "browser": {
     "1000": {
-      "mountMs": 24.6,
+      "mountMs": 27.5,
       "typing": {
         "handlerMs": {
-          "median": 0.8,
-          "p95": 1.3,
-          "max": 3.6,
+          "median": 0.9,
+          "p95": 1.5,
+          "max": 5,
           "n": 100
         },
         "toNextFrameMs": {
           "median": 16.7,
-          "p95": 18.2,
-          "max": 25.8,
+          "p95": 18.6,
+          "max": 25.6,
           "n": 100
         }
       },
       "selectionChange": {
         "handlerMs": {
-          "median": 1.1,
-          "p95": 1.8,
-          "max": 2.5,
+          "median": 1.2,
+          "p95": 1.7,
+          "max": 2,
           "n": 60
         },
         "toNextFrameMs": {
-          "median": 16.8,
+          "median": 16.7,
           "p95": 18.4,
-          "max": 19.5,
+          "max": 19.2,
           "n": 60
         }
       },
       "moveBlock": {
         "handlerMs": {
-          "median": 2.1,
-          "p95": 4,
-          "max": 23.8,
+          "median": 2.2,
+          "p95": 4.6,
+          "max": 26.5,
           "n": 40
         },
         "toNextFrameMs": {
-          "median": 16.8,
-          "p95": 23,
-          "max": 31.9,
+          "median": 16.5,
+          "p95": 23.2,
+          "max": 38.4,
           "n": 40
         }
       },
       "paste200Paragraphs": {
         "handlerMs": {
-          "median": 14.6,
-          "p95": 39.6,
-          "max": 39.6,
+          "median": 14.2,
+          "p95": 43.4,
+          "max": 43.4,
           "n": 5
         },
         "toNextFrameMs": {
-          "median": 39.4,
-          "p95": 53.1,
-          "max": 53.1,
+          "median": 37.8,
+          "p95": 55.5,
+          "max": 55.5,
           "n": 5
         }
       },
       "domNodes": 7265
     },
     "5000": {
-      "mountMs": 68.6,
+      "mountMs": 74,
       "typing": {
         "handlerMs": {
-          "median": 2.7,
-          "p95": 3.7,
-          "max": 9.5,
+          "median": 3,
+          "p95": 7,
+          "max": 12.5,
           "n": 100
         },
         "toNextFrameMs": {
-          "median": 16.7,
-          "p95": 21.7,
-          "max": 52,
+          "median": 16.8,
+          "p95": 27.6,
+          "max": 57.6,
           "n": 100
         }
       },
       "selectionChange": {
         "handlerMs": {
-          "median": 4.5,
-          "p95": 6.1,
-          "max": 9.8,
+          "median": 5.1,
+          "p95": 9.6,
+          "max": 15.3,
           "n": 60
         },
         "toNextFrameMs": {
-          "median": 25,
-          "p95": 35.8,
-          "max": 36.1,
+          "median": 27.6,
+          "p95": 38.9,
+          "max": 44.6,
           "n": 60
         }
       },
       "moveBlock": {
         "handlerMs": {
-          "median": 7.2,
-          "p95": 14.7,
-          "max": 94.8,
+          "median": 7.7,
+          "p95": 13,
+          "max": 101.4,
           "n": 40
         },
         "toNextFrameMs": {
-          "median": 20,
-          "p95": 41.1,
-          "max": 128.5,
+          "median": 23.5,
+          "p95": 33.6,
+          "max": 131,
           "n": 40
         }
       },
       "paste200Paragraphs": {
         "handlerMs": {
-          "median": 18.6,
-          "p95": 106.7,
-          "max": 106.7,
+          "median": 22.2,
+          "p95": 122.1,
+          "max": 122.1,
           "n": 5
         },
         "toNextFrameMs": {
-          "median": 72.5,
-          "p95": 145.5,
-          "max": 145.5,
+          "median": 100.2,
+          "p95": 168.5,
+          "max": 168.5,
           "n": 5
         }
       },
       "domNodes": 19487
     },
     "20000": {
-      "mountMs": 230.8,
+      "mountMs": 261.7,
       "typing": {
         "handlerMs": {
-          "median": 11.5,
-          "p95": 12.4,
-          "max": 14.3,
+          "median": 11.6,
+          "p95": 15.5,
+          "max": 24.2,
           "n": 100
         },
         "toNextFrameMs": {
-          "median": 49.4,
-          "p95": 55.4,
-          "max": 188.5,
+          "median": 50.8,
+          "p95": 79.9,
+          "max": 187.7,
           "n": 100
         }
       },
       "selectionChange": {
         "handlerMs": {
-          "median": 17,
-          "p95": 18.6,
-          "max": 18.9,
+          "median": 17.9,
+          "p95": 23.5,
+          "max": 51.2,
           "n": 60
         },
         "toNextFrameMs": {
-          "median": 108.3,
-          "p95": 131.5,
-          "max": 137.8,
+          "median": 113.5,
+          "p95": 145.6,
+          "max": 168.4,
           "n": 60
         }
       },
       "moveBlock": {
         "handlerMs": {
-          "median": 30.8,
-          "p95": 36.3,
-          "max": 365.9,
+          "median": 31.8,
+          "p95": 40.5,
+          "max": 409.2,
           "n": 40
         },
         "toNextFrameMs": {
-          "median": 92.6,
-          "p95": 139.3,
-          "max": 498.3,
+          "median": 96.7,
+          "p95": 138.7,
+          "max": 590.6,
           "n": 40
         }
       },
       "paste200Paragraphs": {
         "handlerMs": {
-          "median": 37.5,
-          "p95": 367.2,
-          "max": 367.2,
+          "median": 38,
+          "p95": 397.6,
+          "max": 397.6,
           "n": 5
         },
         "toNextFrameMs": {
-          "median": 234.1,
-          "p95": 524,
-          "max": 524,
+          "median": 243.7,
+          "p95": 550.8,
+          "max": 550.8,
           "n": 5
         }
       },
@@ -272,16 +272,16 @@
   },
   "bundles": {
     "headless core (createHeadlessEditor + serializers)": {
-      "minKB": 109.7,
-      "gzipKB": 35.8
+      "minKB": 130.1,
+      "gzipKB": 42.1
     },
     "base editor with default UI (createEditor)": {
-      "minKB": 217.9,
-      "gzipKB": 71.2
+      "minKB": 261.4,
+      "gzipKB": 84.9
     },
     "style.css": {
-      "minKB": 22.6,
-      "gzipKB": 5.2
+      "minKB": 32.7,
+      "gzipKB": 6.8
     },
     "optional: code-highlight (added on top of base)": {
       "minKB": 6.2,
@@ -300,8 +300,8 @@
       "gzipKB": 6
     },
     "no-build file: zeditor.browser.js (editor + UI + highlighting)": {
-      "minKB": 248.4,
-      "gzipKB": 82
+      "minKB": 292.3,
+      "gzipKB": 96.1
     },
     "no-build file: zeditor.collab.browser.js (includes Yjs)": {
       "minKB": 111.2,

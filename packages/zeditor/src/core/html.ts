@@ -410,6 +410,14 @@ class Importer {
     const schema = this.schema;
     // generic round trip of custom nodes exported without a dedicated serializer
     const zt = el.attrs['data-z-type'];
+    if (zt && el.attrs['data-z-raw']) {
+      try {
+        const raw = JSON.parse(el.attrs['data-z-raw']);
+        if (raw && typeof raw === 'object' && typeof raw.type === 'string') return [raw as BlockJSON];
+      } catch {
+        /* fall through to the readable markup */
+      }
+    }
     if (zt && !el.attrs['data-z-inline']) {
       const spec = schema.node(zt);
       let attrs: Attrs = {};

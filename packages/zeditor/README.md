@@ -83,6 +83,23 @@ Theme with CSS variables — no selectors to override:
 .zeditor { --z-accent: #7c3aed; --z-radius: 16px; --z-font: Georgia, serif; }
 ```
 
+## Databases and workspace blocks
+
+Notion-style structures are built in: **databases** with typed properties, saved table / board /
+list / gallery views, filters, sorts, grouping and column calculations — where every row is a
+page with its own content — plus a live **table of contents**, **bookmarks**, **page links**
+(`[[`), **date chips**, **template buttons** and **toggle headings**.
+
+```js
+z.commands.insertDatabase('board', {
+  title: 'Tasks',
+  properties: [{ name: 'Task', type: 'title' }, { name: 'Status', type: 'select', options: [{ id: 'todo', name: 'To do', color: 'gray' }, { id: 'done', name: 'Done', color: 'green' }] }],
+  rows: [{ Task: 'Write docs', Status: 'To do' }],
+});
+```
+
+See [docs/databases.md](../../docs/databases.md) for the model, the command API and what is not implemented.
+
 ## Extensions
 
 Everything built in is an extension, and yours use the same API:
@@ -138,6 +155,7 @@ and every entry point is safe to import during SSR.
 - [Architecture](../../docs/architecture.md)
 - [Extension authoring](../../docs/extensions.md)
 - [Serialization: JSON, HTML, Markdown and their limits](../../docs/serialization.md)
+- [Databases and workspace blocks](../../docs/databases.md)
 - [Collaboration, review features and what a backend must enforce](../../docs/collaboration.md)
 - [Browser support, test coverage and the manual test checklist](../../docs/testing.md)
 - [Benchmarks](../../docs/benchmarks.md)

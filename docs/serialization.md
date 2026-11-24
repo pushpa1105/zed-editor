@@ -54,6 +54,8 @@ handlers, `iframe`, `object`, `style`, forms and unknown elements cannot survive
 | callouts, toggles, columns, pages, page breaks | `div[data-callout]`, `details`, `div[data-columns]`, `section[data-page]`, `div[data-page-break]` | ✓ |
 | children nested under non-list blocks | `div[data-z-children]` | ✓ (other tools show an indented block) |
 | comments, suggestions | `span[data-comment]`, `ins`/`del[data-suggestion]` | ✓ (anchors only; thread bodies live in the comment store) |
+| databases | semantic `<table>` with caption and scoped headers, plus the block JSON in `data-z-raw` | ✓ lossless from our own export; a foreign table imports as a simple table |
+| bookmarks, table of contents, dates, page links | `div[data-bookmark]`, `nav[data-toc]` (empty), `<time datetime>`, `a[data-page-link]` | ✓ |
 | custom nodes without their own serializer | `data-z-type` + `data-z-attrs` | ✓ lossless |
 | unknown nodes (missing extension) | `div[data-z-raw]` | ✓ lossless |
 
@@ -84,6 +86,9 @@ tables, task lists and strikethrough.
 | columns | content in order | **layout lost** |
 | pages | `<!-- page: Title -->` markers | lossless |
 | page breaks | `<!-- pagebreak -->` | lossless |
+| databases | GFM table of cell texts | **lossy**: types, options, views and row pages are lost |
+| bookmarks, dates, page links | links / ISO date / `[title](#page-id)` | re-import as plain links and text |
+| template buttons | `<!-- zeditor:block … -->` | lossless |
 | alignment, indentation, block ids, comments, suggestions | — | **lost** |
 | custom / unknown nodes without `toMarkdown` | `<!-- zeditor:block {json} -->` | lossless |
 

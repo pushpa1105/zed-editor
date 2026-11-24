@@ -264,7 +264,7 @@ export function createBlockHandles(editor: Editor, host: HTMLElement, opts: Bloc
   const handleable = (id: string | null): string | null => {
     // rows, cells, columns and pages are structural: point at the nearest movable block
     let b = id ? editor.doc.get(id) : null;
-    while (b && b !== editor.doc.root && ['table_row', 'table_cell', 'column', 'page'].includes(b.type)) b = b.parent;
+    while (b && b !== editor.doc.root && ['table_row', 'table_cell', 'column', 'page', 'db_row'].includes(b.type)) b = b.parent;
     return b && b !== editor.doc.root ? b.id : null;
   };
   const position = () => {

@@ -30,6 +30,11 @@ import {
   inlinePrompt,
 } from './render';
 import { h, keyName } from './dom';
+import { notionInlineRenderers, notionNodeRenderers } from './notion-render';
+
+// databases and workspace blocks ship their renderers in a separate module
+Object.assign(nodeRenderers, notionNodeRenderers);
+Object.assign(inlineRenderers, notionInlineRenderers);
 
 export interface ViewOptions {
   /** host overrides for block rendering, by node type */
@@ -587,7 +592,10 @@ export class EditorView {
       }
     }
     if (!a || !f) return;
-    if (ds.anchorNode === a.node && ds.anchorOffset === a.offset && ds.focusNode === f.node && ds.focusOffset === f.offset) {
+    // With `force` the selection is written even if the DOM reports the same endpoints: an
+    // engine may have resolved them to a non-editable position while the content was hidden
+    // (WebKit), and only setting it again after layout makes the caret usable.
+    if (!force && ds.anchorNode === a.node && ds.anchorOffset === a.offset && ds.focusNode === f.node && ds.focusOffset === f.offset) {
       this.lastDOMSel = { an: a.node, ao: a.offset, fn: f.node, fo: f.offset };
       return;
     }

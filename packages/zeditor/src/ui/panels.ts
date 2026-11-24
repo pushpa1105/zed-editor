@@ -506,6 +506,18 @@ export function createMediaUI(editor: Editor, host: HTMLElement, uploads: Upload
         },
       });
     }),
+    editor.on('ui:bookmark', (ev: any) => {
+      const anchor = editor.view?.domOf(ev?.blockId ?? '') ?? editor.view?.root ?? host;
+      inlinePrompt(anchor, {
+        value: '',
+        label: editor.label('bookmark.prompt'),
+        onSubmit: (url) => {
+          const u = url.trim();
+          if (u) editor.exec('insertBookmark', /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u, { replace: emptyId(editor, ev?.blockId ?? ''), after: ev?.blockId });
+          editor.focus();
+        },
+      });
+    }),
     editor.on('ui:files', (ev: any) => {
       if (uploads) uploads.uploadFiles(ev.files);
       else editor.emit('ui:error', { message: 'No upload handler configured' });

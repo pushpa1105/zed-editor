@@ -435,6 +435,7 @@ export const nodeRenderers: Record<string, NodeRenderer> = {
     const sync = (nb: Block) => {
       const open = nb.attrs.open !== false;
       dom.dataset.open = String(open);
+      dom.dataset.level = nb.attrs.level ? String(nb.attrs.level) : '';
       btn.setAttribute('aria-expanded', String(open));
     };
     sync(b);

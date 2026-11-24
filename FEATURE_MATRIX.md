@@ -109,7 +109,7 @@ Evidence abbreviations: **U** = `packages/zeditor/test/unit/…`, **B** = `packa
 | `CollaborationPlugin` + context | `createCollab` (framework-independent) | ✅ | B collab |
 | `DecoratorBlockNode`, `BlockWithAlignableContents` | atom blocks with `align`; `nodeViews` | ✅ | B integrations |
 | `NestedComposer` | not needed: containers hold editable blocks directly | ✅ (different design) | B integrations "Vuetify…" |
-| `TableOfContentsPlugin` | `getHeadings(editor)` (data only, no UI) | 🟡 | U features "small helpers" |
+| `TableOfContentsPlugin` | `toc` block (live outline) and `getHeadings(editor)` | ✅ | B notion "table of contents…" |
 | `TreeView` | playground inspector | 🟡 | PG |
 | `ErrorBoundary` | failing renderers fall back to defaults | ✅ | B platform "a host renderer that throws…" |
 | `NodeContextMenuPlugin` | — | ❌ | — |
@@ -145,7 +145,7 @@ Evidence abbreviations: **U** = `packages/zeditor/test/unit/…`, **B** = `packa
 | Review / Versions | suggestions accept/reject; versions | ✅ | U features |
 | FindReplace | ✅ | ✅ | B rich |
 | Shortcuts, TabFocus | keymap; Escape then Tab leaves the editor; Alt+F10 to the toolbar | ✅ | B platform |
-| TableOfContents | data helper only | 🟡 | U |
+| TableOfContents | `toc` block | ✅ | B notion |
 | Actions (import/export, read-only, share…) | playground header + inspector | 🟡 | PG |
 | TreeView, PasteLog, TestRecorder, TypingPerf | inspector; `pnpm bench` | 🟡 | PG, bench |
 | ContextMenu | — | ❌ | — |
@@ -180,7 +180,7 @@ and the playground. No Shadow DOM, iframe, Next.js or Svelte example exists here
 | | create, convert, duplicate, delete, select, move, indent, outdent; multi-block | ✅ | U editing; B blocks |
 | | drag and keyboard reorder incl. nested; invalid moves refused | ✅ | U; B blocks "drag…" |
 | | collapsible sections, callouts, columns | ✅ | B blocks |
-| | reusable templates | 🟡 no dedicated template store: `insertBlocks(json)` inserts any saved block JSON with fresh ids, and slash items can wrap it — there is no UI to save a selection as a template | — |
+| | reusable templates | ✅ template buttons: "Save as template button" block action / `saveAsTemplate`; pressing the button inserts fresh copies (templates live in the document; there is no cross-document gallery) | U database "template buttons…"; B notion |
 | | direct links to blocks | ✅ | B platform "…block links" |
 | **Tables** | rows/columns, headers, column resize, merge/split, keyboard navigation, rectangular selection | ✅ (row resize ❌) | U tables; B rich |
 | | copy/paste ranges with spreadsheets; merged cells, uneven rows, overflow | ✅ | U tables; B rich "paste a spreadsheet…" |
@@ -226,13 +226,48 @@ and the playground. No Shadow DOM, iframe, Next.js or Svelte example exists here
 | Decorations via CSS Custom Highlight API | find, syntax, presence without DOM changes | B rich, collab |
 | Large-document mode | `content-visibility` above 400 blocks | docs/benchmarks.md |
 
+### 5a. Notion-style structures (added on request; not part of the Lexical inventory)
+
+The reference for this group is Notion's product behaviour, described from general knowledge.
+Nothing here was compared against Notion side by side: **no parity is claimed**.
+
+| Capability | zeditor | Status | Evidence |
+| --- | --- | --- | --- |
+| Database with typed properties (title, text, number, select, multi-select, checkbox, date, URL, email, person) | `database` + `db_row` blocks, validated schema | ✅ | U database "creates…", "sanitizes…"; B notion "slash command creates…" |
+| Each row is a page with its own content | row children are ordinary blocks; "Open" reveals them | ✅ | U database; B notion "a row opens as a page…" |
+| Table view: inline cell editing, add / rename / retype / hide / delete properties | ✅ | ✅ | B notion "properties…" |
+| Select options created on the fly, coloured chips | ✅ | ✅ | B notion "slash command creates…" |
+| Board (kanban) view grouped by a select; drag cards between columns | ✅ (reordering cards inside a column ❌) | 🟡 | B notion "views: board…" |
+| List and gallery views | ✅ (gallery has no cover images) | 🟡 | B notion "views…" |
+| Several saved views per database, each with its own settings | ✅ | ✅ | U database "sorts, filters…" |
+| Filters (10 operators, all must match) | ✅ (no AND/OR groups) | 🟡 | U database; B notion "sort and filter…" |
+| Sorts (one per view in the UI; several through the API) | ✅ | 🟡 | U database; B notion |
+| Column calculations (count, sum, average, min, max, % checked…) | ✅ | ✅ | U database; B notion "properties…" |
+| Convert a text property to select / multi-select keeping values | ✅ | ✅ | U database "adds, converts…" |
+| Database HTML export readable by crawlers; lossless re-import | ✅ | ✅ | U database "exports a crawlable table…" |
+| Collaboration on databases | rows merge independently; schema and views are last-writer-wins | 🟡 | U database "concurrent edits…" |
+| Relations, rollups, formulas | — | ❌ | — |
+| Calendar and timeline views | — | ❌ | — |
+| Row templates, synced / linked databases | — | ❌ | — |
+| Column drag-reorder and resize handles in the database table | widths only through the API | ❌ | — |
+| Table of contents block | live outline, click to jump | ✅ | U database "table of contents…"; B notion |
+| Bookmark (web preview) | host-supplied metadata | ✅ | U database "bookmarks…"; B notion |
+| Link to page / page mention (`[[`) | pages of the same document; follows renames | ✅ | U database "page links…"; B notion "[[ links…" |
+| Date mention | date chip with picker (no reminders) | 🟡 | B notion |
+| Template button | stores blocks, inserts fresh copies; "Save as template button" block action | ✅ | U database "template buttons…"; B notion |
+| Toggle headings | ✅ | ✅ | B notion |
+| Callouts, toggles, columns, simple tables, code, equations, embeds, files | see §4 | ✅ | — |
+| Synced blocks, breadcrumbs, nested sub-pages, comments on pages, page icons / covers | — | ❌ | — |
+
 ## 6. Known gaps and limitations
 
 - No verified parity with Lexical 0.53.0 (see the top of this file).
 - Not implemented: plain-text-only mode, context menu, text-case transforms, inline images,
   table row resizing and hover add-buttons, emoticon conversion, speech-to-text, autocomplete,
   drawing/poll/sticky/date/ruby nodes, Dragon support, a devtools browser extension, Prism/Shiki
-  adapters, a template manager UI, a table-of-contents UI.
+  adapters, a cross-document template gallery.
+- Databases: no relations, rollups, formulas, calendar / timeline views or synced databases; see
+  docs/databases.md for the full list and for what merges in collaboration.
 - Equations render through a host-supplied function; without it the LaTeX source is shown.
 - Suggestions track inline text only.
 - No virtualized rendering; see docs/benchmarks.md for where large documents slow down.

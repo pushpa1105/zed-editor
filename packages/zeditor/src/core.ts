@@ -20,6 +20,8 @@ import {
   tableExtension,
 } from './core/builtin';
 import { commentsExtension, suggestionsExtension } from './features/review';
+import { databaseExtension } from './core/database';
+import { notionExtension } from './core/notion';
 import { characterLimitExtension, getText as getTextOf } from './features/text';
 import { blocksToHTML, htmlToBlocks, ExportOptions } from './core/html';
 import { blocksToMarkdown, markdownToBlocks } from './core/markdown';
@@ -44,6 +46,10 @@ export interface Features {
   pages: boolean;
   comments: boolean;
   suggestions: boolean;
+  /** Notion-style databases: typed properties, table / board / list / gallery views */
+  database: boolean;
+  /** table of contents, bookmarks, page links, dates, template buttons, toggle headings */
+  notion: boolean;
 }
 
 export interface MentionOptions {
@@ -94,6 +100,9 @@ export function defaultExtensions(features: Partial<Features> = {}, opts: { ment
   if (f('pages')) out.push(pagesExtension);
   if (f('comments')) out.push(commentsExtension);
   if (f('suggestions')) out.push(suggestionsExtension);
+  if (f('database')) out.push(databaseExtension);
+  // toggle headings extend the toggle node, which lives in the layout extension
+  if (f('notion')) out.push(f('layout') ? notionExtension : { ...notionExtension, requires: ['base'], extendNode: undefined });
   if (opts.characterLimit) out.push(characterLimitExtension(opts.characterLimit));
   return out;
 }
@@ -159,6 +168,10 @@ export function renderToText(content: unknown, options: HeadlessOptions = {}): s
 }
 
 export { copyPayload, cutPayload, pasteData, insertContent, insertInlineContent, parseTSV, tableToMatrix } from './core/clipboard';
+export { databaseExtension, databaseCommands, createDatabase, queryDatabase, calculate, cellValue, cellText, dbProperties, dbViews, dbRows, dbActiveView, currentDatabase, DB_PROPERTY_TYPES, DB_VIEW_TYPES, DB_FILTER_OPS, DB_CALCS, DB_COLORS } from './core/database';
+export type { DbProperty, DbPropertyType, DbOption, DbColor, DbView, DbViewType, DbFilter, DbFilterOp, DbSort, DbCalc, DbResult, DbGroup } from './core/database';
+export { notionExtension, tocEntries, formatDate } from './core/notion';
+export type { LinkPreview, LinkPreviewHandler } from './core/notion';
 export { Editor, Transaction, setIdGenerator } from './core/editor';
 export type { EditorOptions, EditorMode, EditorEvents, TransactionEvent, UpdateOptions, CommandFn, Commands, HistoryProvider } from './core/editor';
 export * from './core/model';

@@ -17,7 +17,7 @@ pnpm playground        # http://127.0.0.1:4173/
 
 | URL | What |
 | --- | --- |
-| `/playground/` | mode switch, feature toggles, themes, custom toolbar, document inspector, import/export, review, versions |
+| `/playground/` | mode switch, feature toggles, themes, custom toolbar, document inspector, import/export, review, versions, a sample database |
 | `/examples/html/` | plain HTML page — no framework, no TypeScript, no build step |
 | `/examples/collab/` | two clients, presence, offline/reconnect (`?room=x` to use two tabs) |
 | `/examples/react/dist/` | React (Strict Mode) with a custom issue-reference node and async `#` menu — run `pnpm build:examples` first, or `pnpm --filter zeditor-example-react dev` |
@@ -46,7 +46,7 @@ examples/vue-vuetify/    Vue 3 + Vuetify example (Vite)
 examples/collab/         two-client collaboration example (no build)
 examples/shared/         framework-independent extensions used by all examples
 playground/              playground page (no build)
-docs/                    architecture, extensions, serialization, collaboration, testing, benchmarks, migration
+docs/                    architecture, extensions, serialization, databases, collaboration, testing, benchmarks, migration
 scripts/                 dev server, benchmarks, pack verification, screenshots
 ```
 

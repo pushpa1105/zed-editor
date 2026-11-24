@@ -65,6 +65,30 @@ function randomOp(e: Editor, r: () => number): string {
     ['page', () => void e.commands.insertPageBreak()],
     ['addPage', () => void (r() < 0.3 && e.commands.addPage())],
     ['selectAll', () => void e.commands.selectAll()],
+    ['database', () => void (r() < 0.4 && e.commands.insertDatabase(pick(['table', 'board', 'list', 'gallery'] as const)))],
+    ['dbRow', () => {
+      const d = all.find((b) => b.type === 'database');
+      if (d) e.commands.dbAddRow(d.id, { title: 'row ' + Math.floor(r() * 9) });
+    }],
+    ['dbCell', () => {
+      const row = pick(all.filter((b) => b.type === 'db_row'));
+      if (!row) return;
+      const prop = pick(row.parent!.attrs.properties as any[]);
+      e.commands.dbSetCell(row.id, prop.id, pick(['x', 3, true, 'todo', ['a'], null] as any[]));
+    }],
+    ['dbSchema', () => {
+      const d = all.find((b) => b.type === 'database');
+      if (!d) return;
+      pick([
+        () => e.commands.dbAddProperty(d.id, { type: pick(['text', 'number', 'select', 'checkbox'] as const) }),
+        () => e.commands.dbAddView(d.id, pick(['table', 'board'] as const)),
+        () => e.commands.dbSort(d.id, pick(d.attrs.properties as any[]).id, 'desc'),
+        () => e.commands.dbDeleteProperty(d.id, pick(d.attrs.properties as any[]).id),
+        () => e.commands.dbDeleteRow(pick(d.children ?? [{ id: 'none' }] as any[])?.id ?? 'none'),
+      ])();
+    }],
+    ['template', () => void (r() < 0.3 && e.commands.saveAsTemplate())],
+    ['toc', () => void (r() < 0.2 && e.commands.insertToc())],
     ['undo', () => void e.undo()],
     ['undo', () => void e.undo()],
     ['redo', () => void e.redo()],
