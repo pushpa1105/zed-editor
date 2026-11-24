@@ -5,19 +5,20 @@ everything else. Two features, both on by default:
 
 | Feature flag | Adds |
 | --- | --- |
-| `database` | databases with typed properties and table / board / list / gallery views |
-| `notion` | table of contents, bookmarks, links to pages (`[[`), date chips, template buttons, toggle headings |
+| `database` | databases with typed properties (including formulas, relations and rollups) and table / board / list / gallery / calendar / timeline views |
+| `notion` | table of contents, bookmarks, links to pages (`[[`), date chips, template buttons, toggle headings, synced copies |
 
 ```js
 createEditor({ element: '#editor', features: { database: true, notion: true }, linkPreview: async (url, { signal }) => fetchMeta(url, signal) });
 ```
 
-Both features are part of the base bundle (they add about 14 kB gzipped to it, see
+Both features are part of the base bundle (together about 25 kB gzipped of script and 4 kB of CSS, see
 [benchmarks](./benchmarks.md)); switching a flag off removes the feature from the editor but not
 from the bundle.
 
-In block mode type `/database`, `/board`, `/toc`, `/bookmark`, `/date`, `/template`,
-`/toggle heading`; type `[[` to link to a page.
+In block mode type `/database`, `/board`, `/calendar`, `/timeline`, `/toc`, `/bookmark`, `/date`,
+`/template`, `/toggle heading`; type `[[` to link to a page. In classic mode the same items are in
+the toolbar's searchable **Insert** menu (`createToolbar(editor, { insert: false })` hides it).
 
 ## Databases
 
@@ -50,7 +51,8 @@ In block mode type `/database`, `/board`, `/toc`, `/bookmark`, `/date`, `/templa
   for editing. Undo, clipboard, comments, find/replace and collaboration work on rows without
   any database-specific code.
 - **Property types:** `title` (exactly one, always first), `text`, `number`, `select`,
-  `multi_select`, `checkbox`, `date`, `url`, `email`, `person` (free text).
+  `multi_select`, `checkbox`, `date`, `url`, `email`, `person` (free text), the computed types
+  `formula`, `relation` and `rollup` (below), and any type you register yourself.
 - **Views** are saved per database and independent: each has its own filters, sorts, grouping,
   hidden properties and column calculations. Sorting and filtering never change the document
   order of the rows; they only change what a view shows.
@@ -62,10 +64,17 @@ In block mode type `/database`, `/board`, `/toc`, `/bookmark`, `/date`, `/templa
 | `table` | one row per record, one column per visible property | header menu per property; calculation footer; Enter moves down a column |
 | `board` | cards in columns, one per option of a `select` property | drag a card to another column to change the value; uses `groupBy` or the first select property |
 | `list` | compact rows: title plus filled properties | |
-| `gallery` | cards in a responsive grid | cards hide empty properties until opened |
+| `gallery` | cards in a responsive grid | the cover is the first image of the row's page, or the start of its text; cards hide empty properties until opened |
+| `calendar` | a month grid; rows sit on the day of a `date` property | previous / today / next; "+" on a day adds a row dated that day; `dateProp` picks the property (one is created with the view if the database has none) |
+| `timeline` | a 28-day window; rows are bars from `dateProp` to the optional `endProp` | rows without a date or outside the window are counted below the view, not shown |
+
+In the table view, click a column header for its settings, drag it sideways to reorder, and drag
+its right edge to resize. On a board, dragging a card onto another card also reorders it (when
+the view is not sorted); a card does not repeat the value its column stands for.
 
 Filters: `contains`, `not_contains`, `is`, `is_not`, `empty`, `not_empty`, `gt`, `lt`,
-`checked`, `unchecked` (all filters must match). Sorts: by any property; selects sort by option
+`checked`, `unchecked`. A view matches **all** of its filters by default or **any** of them
+(`filterMode: 'or'`, "Match" in the filter popup); nested groups are not supported. Sorts: by any property; selects sort by option
 order, text naturally (`item 2` before `item 10`), empty values last in both directions.
 Calculations: `count`, `filled`, `empty`, `unique`, `sum`, `avg`, `min`, `max`, `checked`,
 `percent_checked`.
@@ -101,9 +110,85 @@ editor.commands.dbOpenRow(rowId);                         // caret into the row'
 const { rows, groups, calc, visible } = queryDatabase(editor.doc.get(db.id)); // pure evaluation of the active view
 ```
 
-Also: `dbSetTitle`, `dbDeleteRow`, `dbDuplicateRow`, `dbMoveRow`, `dbDeleteProperty`,
+Also: `dbSetTitle`, `dbDeleteRow`, `dbDuplicateRow`, `dbMoveRow(rowId, targetRowId, 'before' | 'after')`,
+`dbDeleteProperty`, `dbMoveProperty(dbId, propId, toIndex)`, `dbFilterMode(dbId, 'and' | 'or')`,
 `dbUpdateView`, `dbDeleteView`, `dbSetView`. `createDatabase(editor, …)` builds the block JSON
 without inserting it.
+
+### Formulas
+
+A `formula` property is computed for every row from an expression. The language is small and
+parsed by hand — nothing is ever passed to `eval` or `Function`:
+
+```
+prop("Points") * 2
+if(prop("Shipped"), "done", concat(prop("Points"), " pts left"))
+dateDiff(prop("Due"), today())            // whole days until due
+```
+
+- Values: numbers, `"strings"`, `true` / `false`, `prop("Property name")`.
+- Operators: `+ - * / %`, `== != < > <= >=`, `and or not` (also `&& || !`), parentheses.
+  `+` joins when either side is a string. Division by zero gives an empty cell.
+- Functions: `if`, `concat`, `length`, `lower`, `upper`, `contains`, `replace`, `empty`,
+  `toNumber`, `round(x, digits)`, `floor`, `ceil`, `abs`, `min`, `max`, `today`, `now`,
+  `dateDiff(a, b)`, `dateAdd(date, days)`. Unknown functions are rejected when the formula is parsed.
+- Errors never throw: the cell shows `#ERR: …` and the property settings show the message while
+  you type. A formula that refers to itself (directly or through others) evaluates to an error.
+- Limits: 500 tokens, 60 levels of nesting. `today()` is evaluated when the view renders.
+
+```js
+import { runFormula, checkFormula } from '@z-packages/zeditor/core';
+editor.commands.dbAddProperty(db.id, { name: 'Effort', type: 'formula', formula: 'prop("Points") * 2' });
+checkFormula('prop("Points") *');          // → error message, or null when it parses
+runFormula('1 + 2', () => null);           // → 3
+```
+
+### Relations and rollups
+
+- A `relation` property links rows to rows of a database in the same document (possibly itself):
+  `{ type: 'relation', relation: { database: otherDbId } }`. Its cells hold row ids; ids of rows
+  that no longer exist are ignored when read. Relations are one-directional: there is no automatic
+  back-link property.
+- A `rollup` property summarizes one property of the related rows:
+  `{ type: 'rollup', rollup: { relation: relationPropId, target: propIdInTheOtherDatabase, calc: 'sum' } }`.
+  `calc` is any column calculation, or `'show'` to list the values.
+- Formula and rollup cells are read-only (`dbSetCell` returns `false`); they can be sorted,
+  filtered and used in column calculations like stored values.
+
+### Custom property types
+
+```js
+import { registerDbPropertyType } from '@z-packages/zeditor/core';
+
+registerDbPropertyType({
+  type: 'rating',                                   // lower-case identifier
+  label: 'Rating',
+  coerce: (v) => { const n = Math.round(Number(v)); return n >= 1 && n <= 5 ? n : undefined; },
+  text: (v) => '★'.repeat(v ?? 0),                  // used by search, export, cards
+  compare: (a, b) => (a ?? 0) - (b ?? 0),           // optional: sorting
+  render: ({ value, set, readOnly, label }) => {    // optional: the cell's DOM
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.setAttribute('aria-label', label);
+    el.textContent = '★'.repeat(value ?? 0) || '☆';
+    el.disabled = readOnly;
+    el.onclick = () => set(((value ?? 0) % 5) + 1);
+    return el;
+  },
+});
+```
+
+The registry is global (every editor on the page sees the type) and the type then appears in the
+"Add property" menu. Values are always passed through `coerce`, both from the UI and when a
+stored document is loaded. A document that uses a type that is not registered treats it as text.
+
+### Styling
+
+The database UI is plain CSS on stable class names (`src/database.css`, part of `style.css`):
+option colours come from one `--chip` variable per `data-color`, scrollbars from
+`--z-scroll-thumb` / `--z-scroll-thumb-hover`, everything else from the theme variables
+(`--z-accent`, `--z-border`, `--z-surface`…). Labels go through the editor's `labels` option
+(`db.*` keys).
 
 ### Behaviour to know
 
@@ -143,10 +228,11 @@ without inserting it.
 
 ### Not implemented
 
-Relations, rollups, formulas, calendar and timeline views, per-property filters with AND/OR
-groups, row templates, synced databases (one database shown in several places), column drag
-reordering and column resize handles in the database table (widths can be set through
-`dbUpdateProperty(…, { width })`), and virtualized rows — every row is in the DOM.
+Nested filter groups (a view is either "all" or "any"), two-way relations, relations across
+documents, row templates, linked databases (one database shown in several places), dragging
+bars on the timeline or cards on the calendar to change dates, week / year calendar scales, and
+virtualized rows — every row is in the DOM (closed rows are skipped by the browser's layout
+through `content-visibility`). Collaboration granularity is unchanged: see above.
 
 ## Workspace blocks
 
@@ -158,9 +244,22 @@ reordering and column resize handles in the database table (widths can be set th
 | **Date** (`date`, inline) | `@Today`-style chip; click to change | stored as `YYYY-MM-DD`; exported as `<time datetime>` |
 | **Template button** (`template_button`) | inserts fresh copies of stored blocks | create one from a selection with the block action "Save as template button" or `saveAsTemplate(ids)`; stored blocks are validated every time they are inserted |
 | **Toggle heading** | a collapsible section whose summary is styled as heading 1–3 | `setToggleLevel(level)`; needs the `layout` feature |
+| **Synced copy** (`synced`) | a read-only mirror of another block of the same document that follows every change to it | block action "Create synced copy" or `insertSyncedCopy(sourceId?, { after })`. Edit the original ("Go to original"); the copy itself is not editable — this is one-way, unlike Notion's synced blocks. If the original is deleted the copy says so. Exported as an empty `<div data-synced>` marker: static HTML does not contain the mirrored content |
 
 Commands: `insertToc`, `insertBookmark(url)`, `insertDate(iso?)`, `insertPageLink(pageId)`,
-`saveAsTemplate(ids?, label?)`, `useTemplate(buttonId)`, `setToggleLevel(level, id?)`.
+`saveAsTemplate(ids?, label?)`, `useTemplate(buttonId)`, `setToggleLevel(level, id?)`,
+`insertSyncedCopy(sourceId?, at?)`.
 
-Not implemented: synced blocks, breadcrumbs, reminders on dates, sub-pages nested inside pages
-(pages are a flat list), and a template gallery.
+### Sub-pages and breadcrumbs
+
+Pages of a multi-page document can be nested: a page stores its parent in `attrs.parent`.
+`addSubPage(parentId?, title?)` adds a page under the given (or active) page,
+`setPageParent(id, parentId | null)` moves one (it refuses to create a cycle), and removing a
+page moves its sub-pages up to its own parent. The page tabs indent sub-pages, their context menu
+has "Add sub-page" and "Move to top level", and a breadcrumb trail under the tabs shows the path
+of the active page. Helpers: `parentPage`, `pagePath`, `pageTree` from `@z-packages/zeditor/core`.
+Pages remain top-level blocks in document order; nesting is a relationship, not containment, so a
+document written with sub-pages opens as a flat list of pages in a client that ignores `parent`.
+
+Not implemented: two-way synced blocks, reminders on dates, page icons and covers, and a template
+gallery.

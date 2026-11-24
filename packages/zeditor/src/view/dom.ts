@@ -65,5 +65,6 @@ export function place(el: HTMLElement, anchor: { left: number; top: number; bott
   if (opts.above && top < 8) top = anchor.bottom + 6;
   if (!opts.above && top + r.height > vh - 8 && anchor.top - r.height - 8 > 8) top = anchor.top - r.height - 8;
   el.style.left = Math.round(left) + 'px';
-  el.style.top = Math.round(Math.max(8, top)) + 'px';
+  // never run off the bottom edge: tall menus are pulled up (and scroll inside when taller than the viewport)
+  el.style.top = Math.round(Math.max(8, Math.min(top, vh - r.height - 8))) + 'px';
 }

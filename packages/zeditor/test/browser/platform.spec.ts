@@ -130,10 +130,12 @@ test.describe('accessibility and keyboard-only operation', () => {
     expect(await page.evaluate(() => document.activeElement !== document.querySelector('#a .z-root'))).toBe(true);
     await page.evaluate(() => (window as any).z.focus());
     await page.keyboard.press('Alt+F10'); // from the text to the toolbar
-    expect(await active()).toBe('blockType'); // first enabled control (undo / redo are disabled)
+    expect(await active()).toBe('insert'); // first enabled control (undo / redo are disabled)
     await page.keyboard.press('End');
     expect(await active()).toBe('clear');
     await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    expect(await active()).toBe('blockType');
     await page.keyboard.press('ArrowRight');
     expect(await active()).toBe('bold');
     await page.keyboard.press('Enter');
