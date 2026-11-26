@@ -131,7 +131,12 @@ const dayDiff = (a: Date, b: Date) => Math.round((Date.UTC(a.getFullYear(), a.ge
 
 interface RowApi {
   refresh(props: DbProperty[], db: Block, ctx: DbContext, view: DbViewType): void;
+  /** open the row's action menu next to an element or at a point */
+  menu(at: HTMLElement | { x: number; y: number }): void;
 }
+/** rows of a database body in the order the view shows them (CSS `order`), visible only */
+const visualRows = (body: Element | null): HTMLElement[] =>
+  (Array.from(body?.children ?? []) as HTMLElement[]).filter((el) => el.dataset.zid && !el.hidden).sort((a, b) => Number(a.style.order || 0) - Number(b.style.order || 0));
 const rowApi = new WeakMap<HTMLElement, RowApi>();
 const requestLayout = (el: HTMLElement | null) => el?.closest('.z-database')?.dispatchEvent(new CustomEvent('z-db-layout'));
 
@@ -162,6 +167,43 @@ export const database: NodeRenderer = (block, ctx) => {
   const scroll = h('div', { class: 'z-db-scroll' }, cols, body, foot);
   const dom = h('div', { class: 'z-block z-database' }, head, scroll);
 
+  /* ---- quick search: view state, not saved in the document */
+  const query = (): string => (st().search ??= {})[id] ?? '';
+  const searchInput = h('input', { class: 'z-db-searchinput', type: 'text', 'aria-label': L('db.quickSearch', 'Search'), placeholder: L('db.searchPlaceholder', 'Type to search…') });
+  const searchBtn = btn(L('db.quickSearch', 'Search'), () => {
+    searchBox.classList.add('z-open');
+    searchInput.focus();
+  }, 'z-db-tool z-db-searchbtn', 'search');
+  const searchBox = h('div', { class: 'z-db-search', role: 'search' }, searchBtn, searchInput);
+  const setQuery = (q: string) => {
+    (st().search ??= {})[id] = q;
+    schedule();
+  };
+  searchInput.addEventListener('input', () => setQuery(searchInput.value));
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      searchInput.value = '';
+      setQuery('');
+      searchInput.blur();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      // jump to the first match
+      (visualRows(body)[0]?.querySelector('.z-db-cell[data-type="title"] input') as HTMLElement | null)?.focus();
+    }
+  });
+  searchInput.addEventListener('blur', () => {
+    if (!searchInput.value) searchBox.classList.remove('z-open');
+  });
+  const edges = () => {
+    tabs.classList.toggle('z-more-left', tabs.scrollLeft > 2);
+    tabs.classList.toggle('z-more-right', tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 2);
+  };
+  tabs.addEventListener('scroll', edges, { passive: true });
+  /* sticky title column: a shadow once the table is scrolled sideways */
+  scroll.addEventListener('scroll', () => dom.classList.toggle('z-db-scrolled', scroll.scrollLeft > 2), { passive: true });
+
   title.addEventListener('change', () => editor.exec('dbSetTitle', id, title.value));
   title.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') title.blur();
@@ -178,9 +220,38 @@ export const database: NodeRenderer = (block, ctx) => {
       const p = props.find((x) => x.id === f.prop);
       if (p && f.op === 'is' && p.type === 'select' && cells[p.id] === undefined) cells[p.id] = p.options?.find((o) => o.name.toLowerCase() === (f.value ?? '').toLowerCase())?.id;
     }
+    // the new row must land somewhere this view shows it, or "New" looks like it did nothing
+    const res = queryDatabase(db);
+    if (view.type === 'board' && res.groupBy && cells[res.groupBy.id] === undefined) {
+      // first lane with an option (not "no value")
+      const first = res.groupBy.options?.[0];
+      if (first) cells[res.groupBy.id] = first.id;
+    }
+    if ((view.type === 'calendar' || view.type === 'timeline') && res.dateProp) {
+      const dp = res.dateProp;
+      if (!cells[dp.id]) cells[dp.id] = isoOf(new Date());
+      // bring the row's date into view: calendar shows its month, timeline starts its week
+      const d = parseISO(String(cells[dp.id]))!;
+      const cur = cursor(view.id);
+      const shownAlready = view.type === 'calendar' ? cur.getFullYear() === d.getFullYear() && cur.getMonth() === d.getMonth() : dayDiff(d, addDays(cur, -cur.getDay())) >= 0 && dayDiff(d, addDays(cur, -cur.getDay())) < 28;
+      if (!shownAlready) (st().cursor ??= {})[id + ':' + view.id] = isoOf(d);
+    }
+    if (query()) {
+      // a search would hide the empty new row
+      (st().search ??= {})[id] = '';
+      searchInput.value = '';
+    }
     if (editor.exec('dbAddRow', id, cells) && focus) {
       const rid = editor.storage.db?.lastRow;
-      requestAnimationFrame(() => (body.querySelector(`[data-zid="${rid}"] .z-db-cell[data-type="title"] input`) as HTMLElement | null)?.focus());
+      requestAnimationFrame(() => {
+        const el = body.querySelector(`[data-zid="${rid}"]`) as HTMLElement | null;
+        if (!el) return;
+        el.classList.add('z-db-fresh');
+        setTimeout(() => el.classList.remove('z-db-fresh'), 1400);
+        const input = el.querySelector('.z-db-cell[data-type="title"] input') as HTMLElement | null;
+        input?.focus({ preventScroll: true });
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      });
     }
   };
   const addPropertyMenu = (anchor: HTMLElement) => {
@@ -332,7 +403,10 @@ export const database: NodeRenderer = (block, ctx) => {
   };
   const groupPopup = (anchor: HTMLElement) => {
     const db = get()!;
-    popup(anchor, h('div', { class: 'z-db-menu' }, field(L('db.group'), select(L('db.group'), [['', L('db.none')], ...dbProperties(db).filter((p) => p.type === 'select').map((p) => [p.id, p.name] as [string, string])], dbActiveView(db).groupBy ?? '', (v) => void editor.exec('dbGroupBy', id, v || null)))), L('db.group'));
+    const view = dbActiveView(db);
+    const hide = h('input', { type: 'checkbox', checked: !!view.hideEmptyGroups });
+    hide.addEventListener('change', () => void editor.exec('dbUpdateView', id, view.id, { hideEmptyGroups: hide.checked || undefined }));
+    popup(anchor, h('div', { class: 'z-db-menu' }, field(L('db.group'), select(L('db.group'), [...(view.type === 'board' ? [] : [['', L('db.none')] as [string, string]]), ...dbProperties(db).filter((p) => p.type === 'select').map((p) => [p.id, p.name] as [string, string])], view.groupBy ?? (view.type === 'board' ? (queryDatabase(db).groupBy?.id ?? '') : ''), (v) => void editor.exec('dbGroupBy', id, v || null))), h('label', { class: 'z-db-field z-db-check' }, hide, L('db.hideEmptyGroups', 'Hide empty groups'))), L('db.group'));
   };
   const propsPopup = (anchor: HTMLElement) => {
     const box = h('div', { class: 'z-db-menu' });
@@ -416,29 +490,107 @@ export const database: NodeRenderer = (block, ctx) => {
     document.addEventListener('pointerup', up);
   };
 
-  /* ---- cards: drag between board columns and reorder */
+  /* ---- row menu on right click (not inside an opened row's page, which has its own menus) */
+  body.addEventListener('contextmenu', (e) => {
+    const t = e.target as HTMLElement;
+    const row = t.closest('.z-db-row') as HTMLElement | null;
+    // selected text in a field keeps the browser's own menu (copy, paste)
+    const field = t.tagName === 'INPUT' ? (t as HTMLInputElement) : null;
+    if (!row || ro() || t.closest('.z-db-page') || (field && field.selectionStart !== field.selectionEnd)) return;
+    e.preventDefault();
+    rowApi.get(row)?.menu({ x: e.clientX, y: e.clientY });
+  });
+
+  /* calendar entries and timeline bars are mostly their title field: a press there starts a
+     drag; a click without movement still edits the title */
+  const datedView = () => dom.dataset.view === 'calendar' || dom.dataset.view === 'timeline';
+  body.addEventListener('mousedown', (e) => {
+    const t = e.target as HTMLElement;
+    if (datedView() && !ro() && e.button === 0 && t.matches('.z-db-row:not(.z-db-open) .z-db-cell[data-type="title"] input') && document.activeElement !== t) e.preventDefault();
+  });
+
+  /* ---- cards: drag between board columns and reorder; calendar / timeline: change dates */
   body.addEventListener('pointerdown', (e) => {
     const card = (e.target as HTMLElement).closest('.z-db-row') as HTMLElement | null;
-    if (!card || dom.dataset.view !== 'board' || ro() || e.button !== 0 || (e.target as HTMLElement).closest('input, button, select, a, .z-db-page')) return;
+    const kind = dom.dataset.view;
+    if (!card || card.classList.contains('z-db-open') || (kind !== 'board' && !datedView()) || ro() || e.button !== 0) return;
+    const titleInput = (e.target as HTMLElement).matches('.z-db-cell[data-type="title"] input') && document.activeElement !== e.target ? (e.target as HTMLInputElement) : null;
+    if (!(datedView() && titleInput) && (e.target as HTMLElement).closest('input, button, select, a, .z-db-page')) return;
     const rowId = card.dataset.zid!;
     const startX = e.clientX;
     const startY = e.clientY;
+    const cr = card.getBoundingClientRect();
+    // timeline: grabbing a bar's right end changes its end date instead of moving it
+    const resizing = kind === 'timeline' && startX > cr.right - 10 && dom.classList.contains('z-db-hasend');
     let moved = false;
+    const dayAt = (x: number, y: number, sel: string): HTMLElement | undefined =>
+      Array.from(body.querySelectorAll<HTMLElement>(sel)).find((d) => {
+        const r = d.getBoundingClientRect();
+        return x >= r.left && x < r.right && (sel === '.z-db-tlday' || (y >= r.top && y < r.bottom));
+      });
+    let hover: HTMLElement | undefined;
     const move = (ev: PointerEvent) => {
       if (!moved && Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 6) return;
       moved = true;
       card.classList.add('z-dragging');
-      card.style.transform = `translate(${ev.clientX - startX}px, ${ev.clientY - startY}px) rotate(1.5deg)`;
+      if (resizing) card.style.width = Math.max(24, cr.width + ev.clientX - startX) + 'px';
+      else card.style.transform = kind === 'timeline' ? `translateX(${ev.clientX - startX}px)` : `translate(${ev.clientX - startX}px, ${ev.clientY - startY}px)${kind === 'board' ? ' rotate(1.5deg)' : ''}`;
+      if (kind === 'calendar') {
+        const d = dayAt(ev.clientX, ev.clientY, '.z-db-day');
+        if (d !== hover) {
+          hover?.classList.remove('z-drop');
+          d?.classList.add('z-drop');
+          hover = d;
+        }
+      }
     };
     const up = (ev: PointerEvent) => {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       card.classList.remove('z-dragging');
       card.style.transform = '';
-      if (!moved) return;
+      card.style.width = '';
+      hover?.classList.remove('z-drop');
+      if (!moved) {
+        if (titleInput) titleInput.focus();
+        return;
+      }
       const db = get();
       if (!db) return;
-      const res = queryDatabase(db);
+      const res = queryDatabase(db, undefined, { search: query() });
+      if (kind !== 'board') {
+        const dp = res.dateProp;
+        const row = editor.doc.get(rowId);
+        if (!dp || !row) return;
+        if (kind === 'calendar') {
+          const day = dayAt(ev.clientX, ev.clientY, '.z-db-day')?.dataset.date;
+          if (day && day !== cellValue(row, dp, res.ctx)) editor.exec('dbSetCell', rowId, dp.id, day);
+          return;
+        }
+        // timeline: shift by whole days (the bar's start moves with the pointer)
+        const from = dayAt(startX, startY, '.z-db-tlday')?.dataset.date;
+        const to = dayAt(ev.clientX, ev.clientY, '.z-db-tlday')?.dataset.date;
+        const a = parseISO(from ?? '');
+        const b = parseISO(to ?? '');
+        if (!a || !b) return;
+        const delta = dayDiff(b, a);
+        if (!delta) return;
+        const start = parseISO(String(cellValue(row, dp, res.ctx) ?? ''));
+        const endP = res.endProp;
+        const end = endP ? parseISO(String(cellValue(row, endP, res.ctx) ?? '')) : null;
+        if (!start) return;
+        editor.update(() => {
+          if (resizing) {
+            if (!endP) return;
+            const next = addDays(end ?? start, delta);
+            editor.exec('dbSetCell', rowId, endP.id, isoOf(dayDiff(next, start) < 0 ? start : next));
+            return;
+          }
+          editor.exec('dbSetCell', rowId, dp.id, isoOf(addDays(start, delta)));
+          if (endP && end) editor.exec('dbSetCell', rowId, endP.id, isoOf(addDays(end, delta)));
+        });
+        return;
+      }
       const hit = Array.from(cols.querySelectorAll<HTMLElement>('.z-db-colhead')).find((hd) => {
         const r = hd.getBoundingClientRect();
         return ev.clientX >= r.left && ev.clientX <= r.right;
@@ -473,7 +625,7 @@ export const database: NodeRenderer = (block, ctx) => {
   const layout = () => {
     const db = get();
     if (!db || db.type !== 'database') return;
-    const res = queryDatabase(db);
+    const res = queryDatabase(db, undefined, { search: query() });
     const { view, visible } = res;
     // headers and tabs are rebuilt: remember which one had keyboard focus and give it back
     const focused = document.activeElement as HTMLElement | null;
@@ -481,9 +633,12 @@ export const database: NodeRenderer = (block, ctx) => {
     if (dom.dataset.viewId !== view.id) scroll.scrollLeft = 0;
     dom.dataset.viewId = view.id;
     dom.dataset.view = view.type;
+    dom.classList.toggle('z-db-hasend', !!res.endProp);
     dom.classList.toggle('z-db-readonly', ro());
     if (document.activeElement !== title) title.value = db.attrs.title ?? '';
     title.readOnly = ro();
+    if (document.activeElement !== searchInput && searchInput.value !== query()) searchInput.value = query();
+    searchBox.classList.toggle('z-open', !!query() || document.activeElement === searchInput);
     count.textContent = res.rows.length === res.total ? String(res.total) : L('db.count').replace('{n}', String(res.rows.length)).replace('{total}', String(res.total));
 
     /* view tabs */
@@ -503,9 +658,19 @@ export const database: NodeRenderer = (block, ctx) => {
       tabs.append(tab);
     }
     if (!ro()) tabs.append(btn(L('db.addView'), (e) => addViewMenu(e.currentTarget as HTMLElement), 'z-db-tab z-db-addview', 'plus'));
+    // keep the active tab in sight when the tabs overflow (read layout after this pass)
+    requestAnimationFrame(() => {
+      const on = tabs.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (on && tabs.scrollWidth > tabs.clientWidth) {
+        if (on.offsetLeft < tabs.scrollLeft) tabs.scrollLeft = on.offsetLeft - 8;
+        else if (on.offsetLeft + on.offsetWidth > tabs.scrollLeft + tabs.clientWidth) tabs.scrollLeft = on.offsetLeft + on.offsetWidth - tabs.clientWidth + 40;
+      }
+      edges();
+    });
 
     /* tools */
-    tools.textContent = '';
+    for (const c of Array.from(tools.children)) if (c !== searchBox) c.remove();
+    if (searchBox.parentNode !== tools) tools.prepend(searchBox);
     if (!ro()) {
       const tool = (label: string, ic: string, fn: (el: HTMLElement) => void, on: boolean, badge?: number) => {
         const b = btn(label, (e) => fn(e.currentTarget as HTMLElement), 'z-db-tool', ic, label);
@@ -513,7 +678,7 @@ export const database: NodeRenderer = (block, ctx) => {
         if (badge) b.append(h('span', { class: 'z-db-badge' }, String(badge)));
         return b;
       };
-      tools.append(tool(L('db.filter'), 'db-filter', filterPopup, !!view.filters?.length, view.filters?.length), tool(L('db.sort'), 'db-sort', sortPopup, !!view.sorts?.length), tool(L('db.group'), 'db-group', groupPopup, !!view.groupBy), tool(L('db.properties'), 'db-props', propsPopup, false), btn(L('db.newRow'), () => addRow(), 'z-db-newbtn', 'plus', L('db.newRow')));
+      tools.append(tool(L('db.filter'), 'db-filter', filterPopup, !!view.filters?.length, view.filters?.length), tool(L('db.sort'), 'db-sort', sortPopup, !!view.sorts?.length), ...(view.type === 'calendar' || view.type === 'timeline' ? [] : [tool(L('db.group'), 'db-group', groupPopup, !!view.groupBy)]), tool(L('db.properties'), 'db-props', propsPopup, false), btn(L('db.newRow'), () => addRow(), 'z-db-newbtn', 'plus', L('db.newRow')));
     }
 
     /* per-view decorations */
@@ -554,7 +719,7 @@ export const database: NodeRenderer = (block, ctx) => {
         body.append(lane);
         let addEl: HTMLElement | null = null;
         if (!ro()) {
-          const add = btn(L('db.newRow'), () => addRow(res.groupBy && g.option ? { [res.groupBy.id]: g.option.id } : {}), 'z-db-new z-db-lanenew', 'plus', L('db.newRow'));
+          const add = btn(L('db.newRow'), () => addRow(res.groupBy ? { [res.groupBy.id]: g.option?.id ?? null } : {}), 'z-db-new z-db-lanenew', 'plus', L('db.newRow'));
           addEl = deco('z-db-laneadd', `grid-column:${gi + 1};grid-row:1;`, add);
           body.append(addEl);
         }
@@ -569,14 +734,14 @@ export const database: NodeRenderer = (block, ctx) => {
         const first = new Date(cur.getFullYear(), cur.getMonth(), 1);
         const start = addDays(first, -first.getDay());
         const weeks = Math.ceil((first.getDay() + new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate()) / 7);
-        cols.append(h('div', { class: 'z-db-calnav' }, h('strong', { class: 'z-db-month' }, new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(first)), nav(L('db.prev', 'Previous month'), new Date(cur.getFullYear(), cur.getMonth() - 1, 1), 'db-left'), nav(L('db.today', 'Today'), today, undefined, L('db.today', 'Today')), nav(L('db.next', 'Next month'), new Date(cur.getFullYear(), cur.getMonth() + 1, 1), 'db-right')));
+        cols.append(h('div', { class: 'z-db-calnav' }, h('strong', { class: 'z-db-month' }, new Intl.DateTimeFormat(editor.options.locale, { month: 'long', year: 'numeric' }).format(first)), nav(L('db.prev', 'Previous month'), new Date(cur.getFullYear(), cur.getMonth() - 1, 1), 'db-left'), nav(L('db.today', 'Today'), today, undefined, L('db.today', 'Today')), nav(L('db.next', 'Next month'), new Date(cur.getFullYear(), cur.getMonth() + 1, 1), 'db-right')));
         const byDay = new Map<string, Block[]>();
         if (dp) for (const r of res.rows) {
           const d = String(cellValue(r, dp, res.ctx) ?? '');
           if (parseISO(d)) byDay.set(d, [...(byDay.get(d) ?? []), r]);
         }
         body.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
-        for (let d = 0; d < 7; d++) body.append(deco('z-db-weekday', `grid-column:${d + 1};grid-row:1;`, new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(addDays(start, d))));
+        for (let d = 0; d < 7; d++) body.append(deco('z-db-weekday', `grid-column:${d + 1};grid-row:1;`, new Intl.DateTimeFormat(editor.options.locale, { weekday: 'short' }).format(addDays(start, d))));
         let base = 2;
         for (let w = 0; w < weeks; w++) {
           const days = Array.from({ length: 7 }, (_, d) => addDays(start, w * 7 + d));
@@ -584,6 +749,7 @@ export const database: NodeRenderer = (block, ctx) => {
           days.forEach((d, di) => {
             const key = isoOf(d);
             const cell = deco('z-db-day' + (d.getMonth() !== cur.getMonth() ? ' z-db-otherday' : '') + (key === isoOf(today) ? ' z-db-todaycell' : ''), `grid-column:${di + 1};grid-row:${base} / span ${slots + 1};`, h('span', { class: 'z-db-daynum' }, String(d.getDate())));
+            cell.dataset.date = key;
             if (!ro() && dp) cell.append(btn(`${L('db.newRow')} ${key}`, () => addRow({ [dp.id]: key }), 'z-db-dayadd', 'plus'));
             body.append(cell);
             (byDay.get(key) ?? []).forEach((r, i) => place2.set(r.id, { col: String(di + 1), row: String(base + 1 + i) }));
@@ -594,7 +760,7 @@ export const database: NodeRenderer = (block, ctx) => {
       } else {
         const DAYS = 28;
         const start = addDays(cur, -cur.getDay());
-        cols.append(h('div', { class: 'z-db-calnav' }, h('strong', { class: 'z-db-month' }, new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(start) + ' – ' + new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(addDays(start, DAYS - 1))), nav(L('db.prev', 'Previous'), addDays(start, -14), 'db-left'), nav(L('db.today', 'Today'), today, undefined, L('db.today', 'Today')), nav(L('db.next', 'Next'), addDays(start, 21), 'db-right')));
+        cols.append(h('div', { class: 'z-db-calnav' }, h('strong', { class: 'z-db-month' }, new Intl.DateTimeFormat(editor.options.locale, { month: 'short', day: 'numeric' }).format(start) + ' – ' + new Intl.DateTimeFormat(editor.options.locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(addDays(start, DAYS - 1))), nav(L('db.prev', 'Previous'), addDays(start, -14), 'db-left'), nav(L('db.today', 'Today'), today, undefined, L('db.today', 'Today')), nav(L('db.next', 'Next'), addDays(start, 14), 'db-right')));
         body.style.gridTemplateColumns = `repeat(${DAYS}, minmax(34px, 1fr))`;
         let line = 2;
         const lines: { r: Block; from: number; to: number }[] = [];
@@ -609,7 +775,8 @@ export const database: NodeRenderer = (block, ctx) => {
         }
         for (let d = 0; d < DAYS; d++) {
           const day = addDays(start, d);
-          body.append(deco('z-db-tlday' + (isoOf(day) === isoOf(today) ? ' z-db-todaycell' : '') + (day.getDay() === 0 || day.getDay() === 6 ? ' z-db-weekend' : ''), `grid-column:${d + 1};grid-row:1 / span ${lines.length + 2};`, h('span', { class: 'z-db-daynum' }, (day.getDate() === 1 || d === 0 ? new Intl.DateTimeFormat(undefined, { month: 'short' }).format(day) + ' ' : '') + day.getDate())));
+          const tl = body.appendChild(deco('z-db-tlday' + (isoOf(day) === isoOf(today) ? ' z-db-todaycell' : '') + (day.getDay() === 0 || day.getDay() === 6 ? ' z-db-weekend' : ''), `grid-column:${d + 1};grid-row:1 / span ${lines.length + 2};`, h('span', { class: 'z-db-daynum' }, (day.getDate() === 1 || d === 0 ? new Intl.DateTimeFormat(editor.options.locale, { month: 'short' }).format(day) + ' ' : '') + day.getDate())));
+          tl.dataset.date = isoOf(day);
         }
         for (const l of lines) place2.set(l.r.id, { col: `${l.from + 1} / ${l.to + 2}`, row: String(line++), end: l.from > DAYS - 6 });
         for (const r of res.rows) if (!place2.has(r.id)) shown.delete(r.id);
@@ -621,7 +788,40 @@ export const database: NodeRenderer = (block, ctx) => {
     } else if (!ro()) foot.append(btn(L('db.newRow'), () => addRow(), 'z-db-new', 'plus', L('db.newRow')));
 
     /* rows: order, visibility and grid placement */
-    const order = new Map(res.rows.map((r, i) => [r.id, i]));
+    let order = new Map(res.rows.map((r, i) => [r.id, i]));
+    if (!groups && res.groups && (view.type === 'table' || view.type === 'list' || view.type === 'gallery')) {
+      // grouped table / list / gallery: a header per group, rows ordered group by group;
+      // a click on a header folds the group (view state, not saved)
+      const folded: Set<string> = ((st().folded ??= {})[id + ':' + view.id] ??= new Set());
+      order = new Map();
+      let n = 0;
+      for (const g of res.groups) {
+        // an empty "no value" section is noise; empty option sections stay (unless hidden in the Group menu)
+        if (!g.option && !g.rows.length) continue;
+        const key = g.option?.id ?? '';
+        const isFolded = folded.has(key);
+        const head = btn(
+          g.option?.name ?? L('db.noValue'),
+          () => {
+            if (folded.has(key)) folded.delete(key);
+            else folded.add(key);
+            schedule();
+          },
+          'z-db-section',
+        );
+        head.textContent = '';
+        head.append(h('span', { class: 'z-db-ic z-db-fold', html: icon('chevron') }), g.option ? chip(g.option) : h('span', { class: 'z-db-nogroup' }, L('db.noValue')), h('span', { class: 'z-db-groupcount' }, String(g.rows.length)));
+        head.setAttribute('aria-expanded', String(!isFolded));
+        const sec = deco('z-db-sectionrow', `order:${n++};`, head);
+        sec.dataset.option = key;
+        if (isFolded) sec.classList.add('z-folded');
+        body.append(sec);
+        for (const r of g.rows) {
+          order.set(r.id, n++);
+          if (isFolded) shown.delete(r.id);
+        }
+      }
+    }
     for (const el of Array.from(body.children) as HTMLElement[]) {
       const rid = el.dataset.zid;
       if (!rid) continue;
@@ -850,16 +1050,23 @@ export const dbRow: NodeRenderer = (block, ctx) => {
       const commit = () => {
         if (input.value !== String(cellValue(row, p) ?? '')) set(input.value);
       };
+      const step = (dir: 1 | -1) => {
+        const rows = visualRows(dom.parentElement);
+        const next = rows[rows.indexOf(dom) + dir];
+        ((next?.querySelector(`.z-db-cell[data-prop="${p.id}"] input`) as HTMLElement | null) ?? input).focus();
+      };
       input.addEventListener('change', commit);
       input.addEventListener('blur', commit);
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
           commit();
-          // Enter moves down the column, like a spreadsheet
-          let next = dom.nextElementSibling as HTMLElement | null;
-          while (next && (next.hidden || !next.dataset.zid)) next = next.nextElementSibling as HTMLElement | null;
-          ((next?.querySelector(`.z-db-cell[data-prop="${p.id}"] input`) as HTMLElement | null) ?? input).focus();
+          // Enter moves down the column, like a spreadsheet (in the order the view shows rows)
+          step(1);
+        } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !e.shiftKey && !e.altKey && input.type !== 'date') {
+          e.preventDefault();
+          commit();
+          step(e.key === 'ArrowDown' ? 1 : -1);
         } else if (e.key === 'Escape') {
           input.value = String(cellValue(row, p) ?? '');
           input.blur();
@@ -867,17 +1074,9 @@ export const dbRow: NodeRenderer = (block, ctx) => {
       });
       cell.append(input);
       if (p.type === 'title') {
-        const open = btn(L('db.open'), () => {
-          const opening = !isOpen();
-          if (opening) {
-            // show the page before the caret moves into it: a caret placed in content that has
-            // not been laid out is not usable in WebKit
-            dom.classList.add('z-db-open');
-            void page.offsetHeight;
-          }
-          editor.exec('dbOpenRow', row.id, opening);
-          if (opening) ctx.view.focus();
-        }, 'z-db-openbtn', 'db-open', L('db.open'));
+        // (toggleOpen shows the page before the caret moves into it: a caret placed in content
+        // that has not been laid out is not usable in WebKit)
+        const open = btn(L('db.open'), () => toggleOpen(), 'z-db-openbtn', 'db-open', L('db.open'));
         open.setAttribute('aria-expanded', String(isOpen()));
         cell.append(open);
       }
@@ -914,11 +1113,47 @@ export const dbRow: NodeRenderer = (block, ctx) => {
     cells.textContent = '';
     for (const p of props) cells.append(keep === p.id && old.get(p.id) ? old.get(p.id)! : buildCell(p, db, dctx));
     const actions = h('div', { class: 'z-db-cell z-db-actions' });
-    if (!editor.readOnly) actions.append(btn(L('db.duplicateRow'), () => void editor.exec('dbDuplicateRow', row.id), 'z-db-rowbtn', 'copy'), btn(L('db.deleteRow'), () => void editor.exec('dbDeleteRow', row.id), 'z-db-rowbtn', 'trash'));
+    if (!editor.readOnly) {
+      const more = btn(L('db.rowActions', 'Row actions'), () => menu(more), 'z-db-rowbtn z-db-more', 'more');
+      more.setAttribute('aria-haspopup', 'menu');
+      actions.append(more);
+    }
     cells.append(actions);
     if (keep) (cells.querySelector(`.z-db-cell[data-prop="${keep}"] input`) as HTMLElement | null)?.focus();
   };
-  rowApi.set(dom, { refresh });
+  const toggleOpen = () => {
+    const opening = !isOpen();
+    if (opening) {
+      dom.classList.add('z-db-open');
+      void page.offsetHeight;
+    }
+    editor.exec('dbOpenRow', row.id, opening);
+    if (opening) ctx.view.focus();
+  };
+  const menu = (at: HTMLElement | { x: number; y: number }) => {
+    const db = row.parent;
+    if (!db || editor.readOnly) return;
+    const index = () => db.children!.findIndex((c) => c.id === row.id);
+    const run = (fn: () => void) => () => {
+      pop.close();
+      fn();
+    };
+    const box = h(
+      'div',
+      { class: 'z-db-menu z-db-rowmenu' },
+      menuItem(isOpen() ? L('db.close', 'Close') : L('db.open'), 'db-open', run(toggleOpen)),
+      menuItem(L('db.insertAbove', 'Insert above'), 'up', run(() => void editor.exec('dbAddRow', db.id, {}, index()))),
+      menuItem(L('db.insertBelow', 'Insert below'), 'down', run(() => void editor.exec('dbAddRow', db.id, {}, index() + 1))),
+      menuItem(L('db.duplicateRow'), 'copy', run(() => void editor.exec('dbDuplicateRow', row.id))),
+      h('div', { class: 'z-db-sep' }),
+      menuItem(L('db.deleteRow'), 'trash', run(() => void editor.exec('dbDeleteRow', row.id))),
+    );
+    box.lastElementChild!.classList.add('z-danger');
+    const anchor = at instanceof HTMLElement ? at : (cells.querySelector('.z-db-cell') as HTMLElement) ?? dom;
+    const pop = popup(anchor, box, L('db.rowActions', 'Row actions'), 'menu');
+    if (!(at instanceof HTMLElement)) place(pop.el, { left: at.x, top: at.y, bottom: at.y, right: at.x });
+  };
+  rowApi.set(dom, { refresh, menu });
   let host: Element | null = null;
   queueMicrotask(() => {
     host = dom.closest('.z-database');

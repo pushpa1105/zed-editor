@@ -1,4 +1,4 @@
-import { Attrs, Block, BlockJSON, Doc, DocJSON, Inline, InlineAtom, MarkSet, newId, normalizeInline } from './model';
+import { Attrs, Block, BlockJSON, Doc, DocJSON, Inline, InlineAtom, MarkSet, newId, normalizeInline, withIdGenerator } from './model';
 
 export interface AttrSpec {
   default?: any;
@@ -101,6 +101,11 @@ export function clone<T>(v: T): T {
 const BAD_KEY = (k: string) => k === '__proto__' || k === 'constructor' || k === 'prototype';
 
 export class Schema {
+  /** per-editor id generator (EditorOptions.idGenerator); falls back to the process-wide one */
+  idGenerator: (() => string) | null = null;
+  private freshId(): string {
+    return withIdGenerator(this.idGenerator, newId);
+  }
   nodes = new Map<string, NodeSpec>();
   marks = new Map<string, MarkSpec>();
   migrations: Migration[] = [];
@@ -148,7 +153,7 @@ export class Schema {
   create(type: string, attrs?: Attrs, content?: Inline[] | string, children?: BlockJSON[]): BlockJSON {
     const spec = this.nodes.get(type);
     if (!spec) throw new Error(`zeditor: unknown node type "${type}"`);
-    const j: BlockJSON = { id: newId(), type };
+    const j: BlockJSON = { id: this.freshId(), type };
     const a = this.defaults(type, attrs);
     if (Object.keys(a).length) j.attrs = a;
     if (spec.kind === 'text') {
@@ -237,7 +242,7 @@ export class Schema {
     let id = typeof raw.id === 'string' && /^[\w:.-]{1,64}$/.test(raw.id) ? raw.id : '';
     if (!id || seen.has(id)) {
       if (id) issues.push(`duplicate block id "${id}" was regenerated`);
-      id = newId();
+      id = this.freshId();
     }
     seen.add(id);
     const spec = this.nodes.get(raw.type);
@@ -391,7 +396,7 @@ export class Schema {
     }
     if (doc) {
       const fix = (j: BlockJSON) => {
-        if (doc.has(j.id)) j.id = newId();
+        if (doc.has(j.id)) j.id = this.freshId();
         j.children?.forEach(fix);
       };
       out.forEach(fix);

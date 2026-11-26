@@ -37,6 +37,13 @@
   scrollbar-gutter: auto;
   overscroll-behavior: contain;
 }
+/* sideways scrollers: keep a sideways swipe inside, but let the vertical wheel scroll the page
+   (`contain` on both axes swallowed the wheel whenever the pointer was over a database or table) */
+.zeditor .z-db-scroll,
+.zeditor .z-table-wrap {
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+}
 .zeditor .z-scroll {
   overscroll-behavior: auto;
   scroll-behavior: smooth;
@@ -113,6 +120,9 @@
   grid-auto-rows: minmax(28px, auto);
   grid-auto-flow: row dense;
   min-width: 640px;
+}
+.zeditor .z-database[data-view='calendar'] .z-db-body {
+  min-width: 490px;
 }
 .zeditor .z-database[data-view='timeline'] .z-db-body {
   min-width: 980px;
@@ -232,6 +242,7 @@
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
+  position: relative;
 }
 .z-theme .z-db-tab {
   font: inherit;
@@ -744,8 +755,8 @@
   flex-wrap: nowrap;
 }
 .z-theme .z-database[data-view='list'] .z-db-cell[data-type='title'] {
-  flex: 1 1 220px;
-  min-width: 120px;
+  flex: 1 0 220px;
+  min-width: 180px;
 }
 .z-theme .z-database[data-view='list'] .z-db-row:not(.z-db-open) .z-db-cell:not([data-type='title']) {
   flex: 0 1 auto;
@@ -1218,4 +1229,233 @@
 /* day cells take the pointer so their "+" can appear on hover (cards sit above them) */
 .zeditor .z-db-deco.z-db-day {
   pointer-events: auto;
+}
+
+/* ------------------------------------------------------------------ quick search */
+.z-theme .z-db-search {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.z-theme .z-db-searchinput {
+  font: inherit;
+  font-size: 13px;
+  color: var(--z-fg);
+  width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  opacity: 0;
+  transition: width 0.18s ease, opacity 0.12s;
+}
+.z-theme .z-db-search.z-open {
+  background: var(--z-surface-2);
+  box-shadow: inset 0 0 0 1px var(--z-border);
+}
+.z-theme .z-db-search.z-open:focus-within {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--z-accent) 55%, transparent);
+}
+.z-theme .z-db-search.z-open .z-db-searchbtn {
+  color: var(--z-fg);
+  background: transparent;
+}
+.z-theme .z-db-search.z-open .z-db-searchinput {
+  width: 150px;
+  padding-right: 8px;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .z-theme .z-db-searchinput {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ row "more" menu */
+.z-theme .z-db-more svg {
+  width: 16px;
+  height: 16px;
+}
+.z-theme .z-db-rowmenu .z-danger,
+.z-theme .z-db-rowmenu .z-danger .z-menu-icon {
+  color: var(--z-danger);
+}
+.z-theme .z-db-rowmenu .z-danger:hover,
+.z-theme .z-db-rowmenu .z-danger:focus-visible {
+  background: color-mix(in srgb, var(--z-danger) 9%, transparent);
+}
+/* cards: the button floats in the top-right corner on hover */
+.zeditor .z-database:is([data-view='board'], [data-view='gallery']) .z-db-row:not(.z-db-open) .z-db-actions {
+  display: flex;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  padding: 0;
+}
+.z-theme .z-database:is([data-view='board'], [data-view='gallery']) .z-db-row:not(.z-db-open) .z-db-more {
+  background: var(--z-bg);
+  border: 1px solid var(--z-border);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  padding: 2px;
+}
+.zeditor .z-database:is([data-view='board'], [data-view='gallery']) .z-db-row {
+  position: relative;
+}
+.zeditor .z-database[data-view='gallery'] .z-db-row:not(.z-db-open) .z-db-actions {
+  top: 8px;
+  right: 8px;
+}
+/* list rows: at the end of the line */
+.zeditor .z-database[data-view='list'] .z-db-row:not(.z-db-open) .z-db-actions {
+  display: flex;
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ table: sticky title column */
+.z-theme .z-database[data-view='table'] .z-db-cell[data-type='title'],
+.z-theme .z-database[data-view='table'] .z-db-cols > .z-db-colhead:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--z-bg);
+  transition: box-shadow 0.15s;
+}
+.z-theme .z-database[data-view='table'] .z-db-row:hover .z-db-cell[data-type='title'] {
+  background: color-mix(in srgb, var(--z-fg) 3%, var(--z-bg));
+}
+.z-theme .z-database[data-view='table'] .z-db-cell[data-type='title']:focus-within {
+  z-index: 2;
+}
+.z-theme .z-database.z-db-scrolled[data-view='table'] .z-db-cell[data-type='title'],
+.z-theme .z-database.z-db-scrolled[data-view='table'] .z-db-cols > .z-db-colhead:first-child {
+  box-shadow: 6px 0 8px -6px rgba(15, 23, 42, 0.22);
+}
+
+/* ------------------------------------------------------------------ calendar / timeline dragging */
+.z-theme .z-database:is([data-view='calendar'], [data-view='timeline']) .z-db-row:not(.z-db-open) {
+  cursor: grab;
+}
+.z-theme .z-database:is([data-view='calendar'], [data-view='timeline']) .z-db-row:not(.z-db-open) .z-db-cell[data-type='title'] .z-db-input:not(:focus) {
+  cursor: inherit;
+}
+.z-theme .z-database:is([data-view='calendar'], [data-view='timeline']) .z-db-row.z-dragging {
+  cursor: grabbing;
+  z-index: 5;
+  opacity: 0.9;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+}
+.z-theme .z-db-day.z-drop {
+  background: color-mix(in srgb, var(--z-accent) 10%, var(--z-bg));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--z-accent) 55%, transparent);
+}
+/* timeline: the right end of a bar resizes it */
+.zeditor .z-database[data-view='timeline'] .z-db-row:not(.z-db-open) {
+  position: relative;
+}
+.zeditor .z-database.z-db-hasend[data-view='timeline'] .z-db-row:not(.z-db-open)::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  right: 1px;
+  width: 6px;
+  border-radius: 3px;
+  cursor: ew-resize;
+}
+.z-theme .z-database.z-db-hasend[data-view='timeline'] .z-db-row:not(.z-db-open):hover::after {
+  background: color-mix(in srgb, var(--z-accent) 45%, transparent);
+}
+
+/* cards: room for the floating "more" button next to the title */
+.zeditor .z-database:is([data-view='board'], [data-view='gallery']) .z-db-row:not(.z-db-open) .z-db-cell[data-type='title'] {
+  padding-right: 30px;
+}
+/* calendar / timeline entries: the open button only takes space while it is shown */
+.zeditor .z-database:is([data-view='calendar'], [data-view='timeline']) .z-db-row:not(.z-db-open):not(:hover):not(:focus-within) .z-db-openbtn {
+  display: none;
+}
+/* view tabs: fade the edge that has more tabs behind it */
+.z-theme .z-db-tabs.z-more-right {
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+.z-theme .z-db-tabs.z-more-left {
+  mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+}
+.z-theme .z-db-tabs.z-more-left.z-more-right {
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
+/* a row that was just added: a short highlight so it is easy to spot */
+@keyframes z-db-fresh {
+  from {
+    box-shadow: 0 0 0 2px var(--z-accent), 0 0 0 6px color-mix(in srgb, var(--z-accent) 25%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 2px transparent, 0 0 0 6px transparent;
+  }
+}
+.z-theme .z-database .z-db-row.z-db-fresh {
+  animation: z-db-fresh 1.4s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .z-theme .z-database .z-db-row.z-db-fresh {
+    animation: none;
+    outline: 2px solid var(--z-accent);
+  }
+}
+
+/* ------------------------------------------------------------------ grouped table / list / gallery */
+.zeditor .z-database[data-view='gallery'] .z-db-sectionrow {
+  grid-column: 1 / -1;
+}
+.zeditor .z-db-sectionrow {
+  min-width: 0;
+}
+.z-theme .z-db-sectionrow {
+  padding: 14px 0 6px;
+  position: sticky;
+  left: 0;
+}
+.z-theme .z-database[data-view='table'] .z-db-sectionrow {
+  border-bottom: 1px solid var(--z-border);
+  width: max-content;
+  min-width: 100%;
+}
+.z-theme .z-db-section {
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--z-fg);
+  padding: 3px 6px 3px 2px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.z-theme .z-db-section:hover {
+  background: var(--z-surface-2);
+}
+.z-theme .z-db-section:focus-visible {
+  outline: 2px solid var(--z-accent);
+}
+.z-theme .z-db-fold svg {
+  width: 14px;
+  height: 14px;
+  transform: rotate(90deg);
+  transition: transform 0.12s;
+  color: var(--z-muted);
+}
+.z-theme .z-db-sectionrow.z-folded .z-db-fold svg {
+  transform: rotate(0deg);
+}
+.z-theme .z-db-section .z-db-groupcount {
+  color: var(--z-muted);
+  font-size: 12px;
 }

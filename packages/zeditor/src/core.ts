@@ -255,4 +255,9 @@ export type {
   VersionsController,
 } from './features/review';
 export { createAutosave, createUploads, latestRunner } from './features/persist';
+export { createBlockSync, applyBlockChanges, toSyncBlock } from './features/sync';
+export type { BlockSync, BlockSyncOptions, SyncBatch, SyncBlock, SyncStatus } from './features/sync';
+export { summarizeTransaction, BLOCK_EVENTS } from './core/events';
+export type { BlockChanges, BlockCreated, BlockUpdated, BlockDeleted, BlockMoved, BlockCompleted, BlockChangeKind, BlockPosition } from './core/events';
+export { BLOCK_ID, withIdGenerator } from './core/model';
 export type { Autosave, AutosaveOptions, SaveStatus, Draft, DraftStorage, Uploads, UploadsOptions, UploadHandler, UploadResult, LatestRunner } from './features/persist';

@@ -4,3 +4,4 @@ dist
 test-results
 playwright-report
 .consumer-check
+_site

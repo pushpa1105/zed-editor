@@ -7,7 +7,7 @@
  */
 import { Attrs, Block, BlockJSON, Inline, MarkSet, isAtom, normalizeInline } from './model';
 import { Schema, safeUrl } from './schema';
-import { htmlToBlocks } from './html';
+import { htmlToBlocks, blocksToHTML } from './html';
 
 /* ------------------------------------------------------------------ export */
 
@@ -67,6 +67,11 @@ export function blocksToMarkdown(schema: Schema, blocks: readonly (Block | Block
       .replace(/\n/g, ' ');
   }
   function table(b: Block | BlockJSON): string {
+    // GFM tables hold one line of text per cell. Merged cells or cells with lists, code, images or
+    // tables of their own are written as an HTML table instead (Markdown allows raw HTML; the
+    // importer reads it back). Newlines are encoded so the HTML stays one Markdown block.
+    const complex = ((b.children ?? []) as (Block | BlockJSON)[]).some((r) => ((r.children ?? []) as (Block | BlockJSON)[]).some((c) => (c.attrs?.colspan ?? 1) > 1 || (c.attrs?.rowspan ?? 1) > 1 || ((c.children ?? []) as (Block | BlockJSON)[]).some((k) => k.type !== 'paragraph' || !!k.children?.length)));
+    if (complex) return blocksToHTML(schema, [b]).replace(/\r?\n/g, '&#10;');
     const rows = ((b.children ?? []) as (Block | BlockJSON)[]).map((r) => {
       const out: string[] = [];
       for (const c of (r.children ?? []) as (Block | BlockJSON)[]) {

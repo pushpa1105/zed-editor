@@ -1,5 +1,6 @@
 // Zero-dependency static server for the playground, the no-build example and browser tests.
-// Usage: node scripts/serve.mjs [port]   (default 4173)
+// Usage: node scripts/serve.mjs [port] [folder]   (default 4173, the repository root)
+//   node scripts/serve.mjs 4180 _site   serves the built documentation website (`pnpm site:serve`)
 // The built package is exposed at the path a real install would have:
 //   /node_modules/@z-packages/zeditor/...  ->  packages/zeditor/...
 import { createServer } from 'node:http';
@@ -7,7 +8,9 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = resolve(fileURLToPath(import.meta.url), '..', '..');
+const repoRoot = resolve(fileURLToPath(import.meta.url), '..', '..');
+const siteMode = Boolean(process.argv[3]);
+const root = siteMode ? resolve(repoRoot, process.argv[3]) : repoRoot;
 const port = Number(process.argv[2] || process.env.PORT || 4173);
 const types = {
   '.html': 'text/html; charset=utf-8',
@@ -35,7 +38,7 @@ function mapPath(urlPath) {
 const server = createServer(async (req, res) => {
   try {
     let urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-    if (urlPath === '/') {
+    if (urlPath === '/' && !siteMode) {
       res.writeHead(302, { location: '/playground/' });
       return res.end();
     }
@@ -65,4 +68,4 @@ const server = createServer(async (req, res) => {
     res.end(String(e));
   }
 });
-server.listen(port, '127.0.0.1', () => console.log(`zeditor dev server: http://127.0.0.1:${port}/  (playground, examples/html)`));
+server.listen(port, '127.0.0.1', () => console.log(siteMode ? `zeditor docs site: http://127.0.0.1:${port}/` : `zeditor dev server: http://127.0.0.1:${port}/  (playground, examples/html)`));

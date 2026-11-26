@@ -132,7 +132,7 @@ test.describe('accessibility and keyboard-only operation', () => {
     await page.keyboard.press('Alt+F10'); // from the text to the toolbar
     expect(await active()).toBe('insert'); // first enabled control (undo / redo are disabled)
     await page.keyboard.press('End');
-    expect(await active()).toBe('clear');
+    expect(await active()).toBe('find'); // last control: Find and replace
     await page.keyboard.press('Home');
     await page.keyboard.press('ArrowRight');
     expect(await active()).toBe('blockType');

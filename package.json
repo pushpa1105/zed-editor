@@ -11,6 +11,15 @@
     "playground": "node scripts/serve.mjs",
     "bench": "node scripts/bench.mjs",
     "pack:verify": "node scripts/pack-verify.mjs",
-    "check": "pnpm build && pnpm typecheck && pnpm test && pnpm test:browser && pnpm pack:verify"
+    "check": "pnpm build && pnpm typecheck && pnpm docs:check && pnpm test && pnpm test:browser && pnpm pack:verify",
+    "docs:api": "node scripts/api-docs.mjs",
+    "docs:check": "node scripts/docs-check.mjs",
+    "site": "node scripts/build-site.mjs",
+    "site:serve": "node scripts/serve.mjs 4180 _site",
+    "release": "node scripts/release.mjs",
+    "release:notes": "node scripts/release-notes.mjs"
+  },
+  "devDependencies": {
+    "marked": "^16.4.2"
   }
 }

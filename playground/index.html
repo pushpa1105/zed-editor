@@ -83,10 +83,245 @@
       const FEATURES = ['lists', 'code', 'tables', 'layout', 'media', 'equation', 'mentions', 'hashtag', 'emoji', 'markdownShortcuts', 'autolink', 'pages', 'comments', 'suggestions', 'database', 'notion'];
       const $ = (id) => document.getElementById(id);
       const state = { features: Object.fromEntries(FEATURES.map((f) => [f, true])), tab: 'json', log: [] };
-      const KEY = 'zeditor-playground';
+      const KEY = 'zeditor-playground-v2';
       let z, review, comments, suggestions, versions;
 
       const isoIn = (days) => { const d = new Date(Date.now() + days * 86400000); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+
+      /* ---------------- complex tables: merged cells, header column, colours, nested table ---------------- */
+      function complexTables() {
+        let n = 0;
+        const id = (x) => 'ct-' + x + '-' + ++n;
+        const P = (text, attrs) => ({ id: id('p'), type: 'paragraph', ...(attrs ? { attrs } : {}), content: typeof text === 'string' ? (text ? [{ text }] : []) : text });
+        const cell = (content, attrs) => ({ id: id('c'), type: 'table_cell', ...(attrs ? { attrs } : {}), children: Array.isArray(content) ? content : [P(content, attrs?.align ? { align: attrs.align } : undefined)] });
+        const row = (...cells) => ({ id: id('r'), type: 'table_row', children: cells.map(({ align, ...a }) => a) });
+        const num = (v, extra = {}) => ({ ...cell(v, { align: 'right' }), attrs: { ...extra } , children: [P(v, { align: 'right' })] });
+        const H = { header: true };
+        const statement = {
+          id: 'ct-statement', type: 'table', attrs: { colWidths: [200, 110, 110, 110, 110] },
+          children: [
+            row(cell('Line item', { ...H, rowspan: 2 }), cell('2025', { ...H, colspan: 2, align: 'center' }), cell('2026', { ...H, colspan: 2, align: 'center' })),
+            row(cell('H1', { ...H, align: 'right' }), cell('H2', { ...H, align: 'right' }), cell('H1', { ...H, align: 'right' }), cell('H2', { ...H, align: 'right' })),
+            row(cell('Revenue', H), num('1,200'), num('1,380'), num('1,450'), num('1,610', { background: '#e6f4ea' })),
+            row(cell('Cost of sales', H), num('640'), num('700'), num('720'), num('760')),
+            row(cell('Operating costs', H), num('310'), num('330'), num('350'), num('365')),
+            row(cell([P([{ text: 'Profit', marks: { bold: true } }])], H), num([{ text: '250', marks: { bold: true } }], { background: '#fff3c4' }), num([{ text: '350', marks: { bold: true } }], { background: '#fff3c4' }), num([{ text: '380', marks: { bold: true } }], { background: '#fff3c4' }), num([{ text: '485', marks: { bold: true } }], { background: '#fff3c4' })),
+          ],
+        };
+        const inner = {
+          id: 'ct-inner', type: 'table',
+          children: [
+            row(cell('Region', H), cell('Share', { ...H, align: 'right' })),
+            row(cell('Europe'), num('48 %')),
+            row(cell('Americas'), num('37 %')),
+            row(cell('Asia'), num('15 %')),
+          ],
+        };
+        const notes = {
+          id: 'ct-notes', type: 'table', attrs: { colWidths: [220, 0] },
+          children: [
+            row(cell('Topic', H), cell('Details', H)),
+            row(cell('Revenue by region'), cell([P('A table inside a cell:'), inner])),
+            row(cell('Risks'), cell([
+              { id: id('l'), type: 'list', attrs: { kind: 'bullet' }, content: [{ text: 'Currency changes' }] },
+              { id: id('l'), type: 'list', attrs: { kind: 'bullet' }, content: [{ text: 'Supplier prices' }] },
+              { id: id('l'), type: 'list', attrs: { kind: 'check', checked: true }, content: [{ text: 'Hedging in place' }] },
+            ])),
+            row(cell('Formula'), cell([{ id: id('code'), type: 'code', attrs: { language: 'javascript' }, content: [{ text: 'profit = revenue - costOfSales - operatingCosts' }] }])),
+          ],
+        };
+        return [
+          { id: 'ct-h', type: 'heading', attrs: { level: 2 }, content: [{ text: 'Complex tables' }] },
+          P('Cells can be merged across rows and columns (select cells, then "Merge" in the table tools), the first column can be a header column, cells can be coloured, and a cell can hold any block, including lists, code and another table. Put the caret in a cell and use Insert → Table to nest one.'),
+          P([{ text: 'Half-year statement', marks: { bold: true } }]),
+          statement,
+          notes,
+        ];
+      }
+      /* ---------------- database examples: what databases are for, ready to try ---------------- */
+      const para = (id, ...parts) => ({ id, type: 'paragraph', content: parts.map((x) => (typeof x === 'string' ? { text: x } : x)) });
+      const b = (text) => ({ text, marks: { bold: true } });
+      const bullet = (id, ...parts) => ({ id, type: 'list', attrs: { kind: 'bullet' }, content: parts.map((x) => (typeof x === 'string' ? { text: x } : x)) });
+      const howTo = (id, title, steps) => ({ id, type: 'callout', attrs: { tone: 'info', icon: '👉' }, children: [para(id + 't', b(title)), ...steps.map((st, i) => bullet(id + i, ...(Array.isArray(st) ? st : [st])))] });
+      /** createDatabase + extra views (property names instead of ids) + notes inside rows */
+      function makeDb(id, def) {
+        const json = Z.createDatabase(Z.createHeadlessEditor(), { title: def.title, properties: def.properties, rows: def.rows, view: def.views[0].type });
+        json.id = id;
+        const pid = (name) => json.attrs.properties.find((x) => x.name === name)?.id;
+        json.attrs.views = def.views.map((v, i) => {
+          const out = { id: 'v' + (i + 1), name: v.name, type: v.type };
+          if (v.groupBy) out.groupBy = pid(v.groupBy);
+          if (v.dateProp) out.dateProp = pid(v.dateProp);
+          if (v.endProp) out.endProp = pid(v.endProp);
+          if (v.sorts) out.sorts = v.sorts.map(([n, dir]) => ({ prop: pid(n), dir }));
+          if (v.filters) out.filters = v.filters.map(([n, op, value]) => ({ prop: pid(n), op, value }));
+          if (v.hidden) out.hidden = v.hidden.map(pid);
+          if (v.calc) out.calc = Object.fromEntries(Object.entries(v.calc).map(([n, c]) => [pid(n), c]));
+          return out;
+        });
+        json.attrs.view = 'v1';
+        json.children.forEach((row, i) => {
+          row.id = id + '-r' + (i + 1);
+          const notes = def.rows[i].notes;
+          if (notes) row.children = notes.map((t, k) => para(row.id + 'n' + k, t));
+        });
+        return json;
+      }
+      function databaseExamples() {
+        const tasks = makeDb('db-tasks', {
+          title: 'Launch tasks',
+          properties: [
+            { name: 'Task', type: 'title' },
+            { name: 'Status', type: 'select', options: [{ id: 'todo', name: 'To do', color: 'gray' }, { id: 'doing', name: 'In progress', color: 'blue' }, { id: 'done', name: 'Done', color: 'green' }] },
+            { name: 'Owner', type: 'select', options: [{ id: 'ada', name: 'Ada', color: 'purple' }, { id: 'linus', name: 'Linus', color: 'orange' }, { id: 'grace', name: 'Grace', color: 'pink' }] },
+            { name: 'Tags', type: 'multi_select', options: [{ id: 'ui', name: 'UI', color: 'pink' }, { id: 'docs', name: 'Docs', color: 'yellow' }, { id: 'infra', name: 'Infra', color: 'purple' }] },
+            { name: 'Points', type: 'number' },
+            { name: 'Start', type: 'date' },
+            { name: 'Due', type: 'date' },
+            { name: 'Shipped', type: 'checkbox' },
+            { name: 'Effort', type: 'formula', formula: 'if(prop("Points") > 4, "Large", "Small") + " · " + prop("Points") * 2 + "h"' },
+          ],
+          rows: [
+            { Task: 'Design the toolbar', Status: 'Done', Owner: 'Ada', Tags: ['UI'], Points: 3, Start: isoIn(-8), Due: isoIn(-3), Shipped: true, notes: ['Final icons are in the design file. Contrast checked in both themes.'] },
+            { Task: 'Write the quick starts', Status: 'In progress', Owner: 'Grace', Tags: ['Docs'], Points: 5, Start: isoIn(-2), Due: isoIn(2), notes: ['Cover HTML, React and Vue. Each one must run in under five minutes.'] },
+            { Task: 'Set up the relay server', Status: 'To do', Owner: 'Linus', Tags: ['Infra'], Points: 8, Start: isoIn(3), Due: isoIn(9) },
+            { Task: 'Polish the block handles', Status: 'In progress', Owner: 'Ada', Tags: ['UI', 'Docs'], Points: 2, Start: isoIn(0), Due: isoIn(2) },
+            { Task: 'Accessibility review', Status: 'To do', Owner: 'Grace', Tags: ['UI'], Points: 3, Start: isoIn(5), Due: isoIn(7) },
+          ],
+          views: [
+            { name: 'All tasks', type: 'table', calc: { Points: 'sum', Shipped: 'percent_checked' } },
+            { name: 'Board', type: 'board', groupBy: 'Status' },
+            { name: 'By owner', type: 'list', groupBy: 'Owner', hidden: ['Owner', 'Points', 'Start', 'Shipped', 'Effort'] },
+            { name: 'Calendar', type: 'calendar', dateProp: 'Due' },
+            { name: 'Timeline', type: 'timeline', dateProp: 'Start', endProp: 'Due' },
+            { name: 'Open work', type: 'table', filters: [['Status', 'is_not', 'Done']], sorts: [['Due', 'asc']] },
+          ],
+        });
+        const content = makeDb('db-content', {
+          title: 'Content calendar',
+          properties: [
+            { name: 'Post', type: 'title' },
+            { name: 'Channel', type: 'select', options: [{ id: 'blog', name: 'Blog', color: 'blue' }, { id: 'news', name: 'Newsletter', color: 'green' }, { id: 'social', name: 'Social', color: 'pink' }] },
+            { name: 'Stage', type: 'select', options: [{ id: 'idea', name: 'Idea', color: 'gray' }, { id: 'draft', name: 'Drafting', color: 'yellow' }, { id: 'ready', name: 'Ready', color: 'green' }] },
+            { name: 'Publish on', type: 'date' },
+            { name: 'Link', type: 'url' },
+          ],
+          rows: [
+            { Post: 'Why we built zeditor', Channel: 'Blog', Stage: 'Ready', 'Publish on': isoIn(1), Link: 'example.com/why' },
+            { Post: 'November product update', Channel: 'Newsletter', Stage: 'Drafting', 'Publish on': isoIn(4) },
+            { Post: 'Databases in 60 seconds (video)', Channel: 'Social', Stage: 'Idea', 'Publish on': isoIn(6) },
+            { Post: 'Migrating from another editor', Channel: 'Blog', Stage: 'Drafting', 'Publish on': isoIn(11) },
+            { Post: 'Tips: keyboard shortcuts', Channel: 'Social', Stage: 'Ready', 'Publish on': isoIn(-2) },
+          ],
+          views: [
+            { name: 'Calendar', type: 'calendar', dateProp: 'Publish on' },
+            { name: 'Pipeline', type: 'board', groupBy: 'Stage' },
+            { name: 'By channel', type: 'table', groupBy: 'Channel', sorts: [['Publish on', 'asc']] },
+          ],
+        });
+        const books = makeDb('db-books', {
+          title: 'Reading list',
+          properties: [
+            { name: 'Book', type: 'title' },
+            { name: 'Author', type: 'text' },
+            { name: 'Genre', type: 'multi_select', options: [{ id: 'sf', name: 'Science fiction', color: 'purple' }, { id: 'hist', name: 'History', color: 'brown' }, { id: 'tech', name: 'Technology', color: 'blue' }, { id: 'bio', name: 'Biography', color: 'orange' }] },
+            { name: 'Rating', type: 'select', options: [{ id: 'r5', name: '★★★★★', color: 'yellow' }, { id: 'r4', name: '★★★★', color: 'yellow' }, { id: 'r3', name: '★★★', color: 'gray' }] },
+            { name: 'Finished', type: 'checkbox' },
+          ],
+          rows: [
+            { Book: 'The Left Hand of Darkness', Author: 'Ursula K. Le Guin', Genre: ['Science fiction'], Rating: '★★★★★', Finished: true, notes: ['A classic about a planet where people have no fixed gender. The ice crossing is unforgettable.'] },
+            { Book: 'Hidden Figures', Author: 'Margot Lee Shetterly', Genre: ['History', 'Biography'], Rating: '★★★★', Finished: true, notes: ['The story of the women mathematicians at NASA Langley.'] },
+            { Book: 'The Soul of a New Machine', Author: 'Tracy Kidder', Genre: ['Technology'], Rating: '★★★★', Finished: false, notes: ['Half way. The engineering-team chapters feel very familiar.'] },
+            { Book: 'Project Hail Mary', Author: 'Andy Weir', Genre: ['Science fiction'], Finished: false },
+          ],
+          views: [
+            { name: 'Shelf', type: 'gallery' },
+            { name: 'Best first', type: 'table', sorts: [['Rating', 'asc']] },
+            { name: 'To read', type: 'list', filters: [['Finished', 'unchecked', '']] },
+          ],
+        });
+        const deals = makeDb('db-deals', {
+          title: 'Deals',
+          properties: [
+            { name: 'Deal', type: 'title' },
+            { name: 'Value', type: 'number' },
+            { name: 'Stage', type: 'select', options: [{ id: 'lead', name: 'Lead', color: 'gray' }, { id: 'prop', name: 'Proposal', color: 'blue' }, { id: 'won', name: 'Won', color: 'green' }, { id: 'lost', name: 'Lost', color: 'red' }] },
+          ],
+          rows: [
+            { Deal: 'Acme – 50 seats', Value: 12000, Stage: 'Won' },
+            { Deal: 'Acme – support plan', Value: 3000, Stage: 'Proposal' },
+            { Deal: 'Globex pilot', Value: 5000, Stage: 'Lead' },
+            { Deal: 'Initech renewal', Value: 8000, Stage: 'Won' },
+          ],
+          views: [{ name: 'Pipeline', type: 'board', groupBy: 'Stage' }, { name: 'All deals', type: 'table', calc: { Value: 'sum' } }],
+        });
+        const companies = makeDb('db-companies', {
+          title: 'Customers',
+          properties: [
+            { name: 'Company', type: 'title' },
+            { name: 'Contact', type: 'email' },
+            { name: 'Deals', type: 'relation', relation: { database: 'db-deals' } },
+          ],
+          rows: [
+            { Company: 'Acme', Contact: 'buyer@acme.example', Deals: ['db-deals-r1', 'db-deals-r2'] },
+            { Company: 'Globex', Contact: 'it@globex.example', Deals: ['db-deals-r3'] },
+            { Company: 'Initech', Contact: 'ops@initech.example', Deals: ['db-deals-r4'] },
+          ],
+          views: [{ name: 'Customers', type: 'table' }],
+        });
+        // rollup: total value of each customer's deals (needs the ids created above)
+        const rel = companies.attrs.properties.find((x) => x.name === 'Deals').id;
+        const value = deals.attrs.properties.find((x) => x.name === 'Value').id;
+        companies.attrs.properties.push({ id: 'ptotal', name: 'Total value', type: 'rollup', rollup: { relation: rel, target: value, calc: 'sum' } });
+        companies.children.forEach((row, i) => (row.attrs.cells[rel] = [['db-deals-r1', 'db-deals-r2'], ['db-deals-r3'], ['db-deals-r4']][i]));
+
+        return [
+          { id: 'hdb', type: 'heading', attrs: { level: 2 }, content: [{ text: 'Databases: what they are for' }] },
+          para('pdb1', 'A ', b('database'), ' is a list of items that share the same fields. A task has a status, an owner and a due date. A blog post has a channel and a publish date. A book has an author and a rating. Keep the items in a database instead of a plain table and you can:'),
+          bullet('pdb2', b('look at the same items in different ways'), ': a ', b('table'), ' to edit, a ', b('board'), ' to drag cards between stages, a ', b('calendar'), ' or ', b('timeline'), ' to plan by date, a ', b('gallery'), ' of cards, or a compact ', b('list'), ';'),
+          bullet('pdb3', b('filter, sort, group and search'), ' them (each view keeps its own settings);'),
+          bullet('pdb4', b('open any item as a page'), ' and write notes inside it;'),
+          bullet('pdb5', b('compute'), ' values: sums and averages under a table, formulas per item, totals from linked databases.'),
+          para('pdb6', 'Each database below has several views set up already. Click the tabs under its title to switch between them.'),
+          { id: 'toc', type: 'toc' },
+
+          { id: 'h-tasks', type: 'heading', attrs: { level: 3 }, content: [{ text: '1. Task tracker' }] },
+          howTo('how-tasks', 'Try this:', [
+            ['Click ', b('Board'), ' and drag a card from "To do" to "Done". The Status changes in every view.'],
+            ['Click ', b('Timeline'), ' and drag a bar sideways to reschedule it, or drag its right end to change the due date.'],
+            ['Hover a row and click ', b('OPEN'), ' (or right-click → Open) to read the notes inside a task.'],
+            ['Click ', b('+ New'), '. The new task appears highlighted in whichever view you are on.'],
+            ['Use the ', b('🔍 search'), ', ', b('Filter'), ', ', b('Sort'), ' and ', b('Group'), ' buttons; "Open work" is a saved filtered view.'],
+            ['Click a column header (e.g. ', b('Points'), ') to rename it, change its type, sort, or pick a calculation.'],
+          ]),
+          tasks,
+
+          { id: 'h-content', type: 'heading', attrs: { level: 3 }, content: [{ text: '2. Content calendar' }] },
+          howTo('how-content', 'Plan posts by date:', [
+            ['Drag a post to another day on the ', b('Calendar'), ' to reschedule it. The "+" on a day adds a post for that date.'],
+            ['Use ', b('Pipeline'), ' to move ideas through Idea → Drafting → Ready.'],
+            [b('By channel'), ' is a table grouped by Channel; click a group header to fold it.'],
+          ]),
+          content,
+
+          { id: 'h-books', type: 'heading', attrs: { level: 3 }, content: [{ text: '3. Reading list' }] },
+          howTo('how-books', 'A gallery of pages:', [
+            ['Each card shows the start of the notes written inside the book\'s page. Open a card to write more.'],
+            [b('To read'), ' is the same list filtered to unfinished books; tick ', b('Finished'), ' and the book leaves that view.'],
+          ]),
+          books,
+
+          { id: 'h-crm', type: 'heading', attrs: { level: 3 }, content: [{ text: '4. Customers and deals (linked databases)' }] },
+          howTo('how-crm', 'Databases can point at each other:', [
+            ['A ', b('relation'), ' property links rows of two databases: each customer lists its deals. Click a Deals cell to link or unlink deals.'],
+            ['A ', b('rollup'), ' summarizes the linked rows: ', b('Total value'), ' adds up the Value of each customer\'s deals. Change a deal\'s value and watch it update.'],
+          ]),
+          companies,
+          deals,
+          para('pdb7', 'Developers: the same data is available from code (', { text: 'queryDatabase', marks: { code: true } }, ', ', { text: 'dbSetCell', marks: { code: true } }, ', block events). See docs/databases.md and docs/events-and-sync.md.'),
+        ];
+      }
       const sample = () => ({
         format: 'zeditor', version: 1,
         blocks: [
@@ -99,27 +334,9 @@
             { id: 'r1', type: 'table_row', children: [{ id: 'k1', type: 'table_cell', attrs: { header: true }, children: [{ id: 'k1p', type: 'paragraph', content: [{ text: 'Feature' }] }] }, { id: 'k2', type: 'table_cell', attrs: { header: true }, children: [{ id: 'k2p', type: 'paragraph', content: [{ text: 'Try it' }] }] }] },
             { id: 'r2', type: 'table_row', children: [{ id: 'k3', type: 'table_cell', children: [{ id: 'k3p', type: 'paragraph', content: [{ text: 'Paste from a spreadsheet' }] }] }, { id: 'k4', type: 'table_cell', children: [{ id: 'k4p', type: 'paragraph', content: [{ text: 'Select cells, Tab, merge' }] }] }] },
           ] },
+          ...complexTables(),
           { id: 'co', type: 'callout', attrs: { tone: 'info', icon: 'ℹ️' }, children: [{ id: 'cop', type: 'paragraph', content: [{ text: 'Callouts, toggles and columns hold ordinary blocks. Click the icon to change the tone.' }] }] },
-          { id: 'hdb', type: 'heading', attrs: { level: 2 }, content: [{ text: 'A database' }] },
-          { id: 'toc', type: 'toc' },
-          Z.createDatabase(Z.createHeadlessEditor(), {
-            title: 'Launch tasks',
-            properties: [
-              { name: 'Task', type: 'title' },
-              { name: 'Status', type: 'select', options: [{ id: 'todo', name: 'To do', color: 'gray' }, { id: 'doing', name: 'In progress', color: 'blue' }, { id: 'done', name: 'Done', color: 'green' }] },
-              { name: 'Tags', type: 'multi_select', options: [{ id: 'ui', name: 'UI', color: 'pink' }, { id: 'docs', name: 'Docs', color: 'yellow' }, { id: 'infra', name: 'Infra', color: 'purple' }] },
-              { name: 'Points', type: 'number' },
-              { name: 'Due', type: 'date' },
-              { name: 'Shipped', type: 'checkbox' },
-              { name: 'Effort', type: 'formula', formula: 'if(prop("Points") > 4, "L", "S") + " · " + prop("Points") * 2 + "h"' },
-            ],
-            rows: [
-              { Task: 'Design the toolbar', Status: 'Done', Tags: ['UI'], Points: 3, Due: isoIn(-3), Shipped: true },
-              { Task: 'Write the quick starts', Status: 'In progress', Tags: ['Docs'], Points: 5, Due: isoIn(2) },
-              { Task: 'Set up the relay', Status: 'To do', Tags: ['Infra'], Points: 8, Due: isoIn(6) },
-              { Task: 'Polish the block handles', Status: 'In progress', Tags: ['UI', 'Docs'], Points: 2, Due: isoIn(2) },
-            ],
-          }),
+          ...databaseExamples(),
           ...SHARED_DOCUMENT.blocks,
           { id: 'eq', type: 'equation', attrs: { tex: 'e^{i\\pi} + 1 = 0' } },
           { id: 'pz', type: 'paragraph', content: [{ text: 'Mixed scripts: नमस्ते दुनिया · שלום עולם · 👨‍👩‍👧‍👦 · é' }] },

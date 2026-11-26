@@ -48,7 +48,7 @@ handlers, `iframe`, `object`, `style`, forms and unknown elements cannot survive
 | lists, nested lists, checklists | `ul`/`ol`/`li`, `data-type="checklist"`, `data-checked` | ✓ incl. GitHub task lists, Google Docs sibling lists, Word `mso-list` paragraphs |
 | alignment, indentation | `style="text-align"`, `margin-left` | alignment ✓, indentation ✗ (margins are not interpreted) |
 | code blocks | `pre data-language > code.language-x` | ✓ |
-| tables, header cells, merged cells, column widths | `table`, `th`, `colspan`/`rowspan`, `colgroup` | ✓ (widths are not imported) |
+| tables, header cells, merged cells, column widths, cell colours, nested tables | `table`, `th`, `colspan`/`rowspan`, `colgroup`, `background-color` | ✓. Importing also reads `<caption>` (becomes a bold paragraph above the table), `<col width>` / `style="width:…px"`, `bgcolor`, cell `align` / `text-align` (applied to the cell's paragraphs), header cells in any row or column, and `thead` / `tfoot`. Tables inside cells are kept up to 4 levels deep; deeper ones are flattened to their content. Layout tables (`role="presentation"`, or a table with a single cell, common in e-mails and old pages) are unwrapped to their content |
 | images with alt, caption, width | `figure > img + figcaption` | ✓ (`img` anywhere becomes an image block) |
 | files, embeds, equations, mentions | `a[data-file]`, `div[data-embed]`, `div[data-equation]`, `span[data-mention]` | ✓ from our own export |
 | callouts, toggles, columns, pages, page breaks | `div[data-callout]`, `details`, `div[data-columns]`, `section[data-page]`, `div[data-page-break]` | ✓ |
@@ -76,7 +76,7 @@ tables, task lists and strikethrough.
 | lists, nested lists, task lists | `-`, `1.`, `- [x]` | start numbers kept |
 | quotes | `>` | one quote block per paragraph |
 | code blocks | fenced, with language | |
-| tables | GFM | merged cells are flattened; cells holding several blocks are joined with `<br>`; alignment is lost |
+| tables | GFM, or an HTML `<table>` | simple tables (one paragraph per cell, no merged cells) are GFM tables; cell alignment is lost. Tables with merged cells or cells holding lists, code, images or other tables are written as an HTML table on one line (Markdown allows raw HTML) and read back losslessly |
 | images | `![alt](src "caption")` | width and alignment are lost |
 | files, embeds | links | become plain links on import |
 | equations | `$$…$$`, `$…$` | |

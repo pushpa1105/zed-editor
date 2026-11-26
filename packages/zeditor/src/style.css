@@ -1413,3 +1413,93 @@
   font-size: 1.25em;
   font-weight: 700;
 }
+
+/* ------------------------------------------------------------------ notices */
+.zeditor .z-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.zeditor .z-notices {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  max-width: min(420px, calc(100vw - 32px));
+}
+.zeditor .z-notice {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.z-theme .z-notice {
+  font-size: 13.5px;
+  line-height: 1.45;
+  padding: 10px 8px 10px 14px;
+  border-radius: 10px;
+  background: var(--z-fg);
+  color: var(--z-bg);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22);
+  animation: z-notice-in 0.16s ease-out;
+}
+.z-theme .z-notice-error {
+  border-left: 4px solid var(--z-danger);
+}
+.z-theme .z-notice.z-leaving {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.z-theme .z-notice-text {
+  flex: 1;
+  padding-top: 1px;
+}
+.z-theme .z-notice-close {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 5px;
+  display: inline-flex;
+}
+.z-theme .z-notice-close:hover,
+.z-theme .z-notice-close:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, var(--z-bg) 18%, transparent);
+}
+.z-theme .z-notice-close svg {
+  width: 14px;
+  height: 14px;
+}
+@keyframes z-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .z-theme .z-notice {
+    animation: none;
+  }
+}
+
+/* the table the table tools act on, when tables are nested */
+.z-theme .z-table-active .z-table-active,
+.z-theme td .z-table-active,
+.z-theme th .z-table-active {
+  outline: 2px solid color-mix(in srgb, var(--z-accent) 45%, transparent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

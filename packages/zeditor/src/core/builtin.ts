@@ -399,6 +399,8 @@ export const baseExtension: Extension = {
     { id: 'indent', group: 'indent', label: 'indent', icon: 'indent', command: 'indent', shortcut: 'Tab', order: 61 },
     { id: 'divider', group: 'insert', label: 'block.divider', icon: 'divider', command: 'insertBlock', args: ['divider'], order: 72 },
     { id: 'clear', group: 'clear', label: 'clearFormatting', icon: 'clear', command: 'clearFormatting', shortcut: 'Mod-\\', order: 90 },
+    // opens the find panel of the default UI; disabled when no find panel is mounted
+    { id: 'find', group: 'find', label: 'find.title', icon: 'search', shortcut: 'Mod-f', run: (e) => void e.emit('ui:find'), enabled: (e) => e.hasListener('ui:find'), order: 95 },
   ],
   slashItems: [
     textSlash('paragraph', 'Text', 'paragraph', undefined, ['paragraph', 'plain', 'p'], 'text', 1, 'Plain text'),
@@ -451,6 +453,14 @@ export const baseExtension: Extension = {
     indent: 'Indent',
     outdent: 'Outdent',
     clearFormatting: 'Clear formatting',
+    'find.title': 'Find and replace',
+    'notice.close': 'Dismiss',
+    'notice.noUpload': 'Files cannot be added here: uploads are not set up. Use a link instead.',
+    'notice.badUrl': 'That address is not a valid link.',
+    'notice.uploadFailed': 'Upload failed: {name}. Use Retry on the file to try again.',
+    'notice.tooLarge': '{name} is too large to upload.',
+    'notice.badType': '{name} is not a supported file type.',
+    'comment.unavailable': 'Comments are not available in this editor.',
     'action.duplicate': 'Duplicate',
     'action.delete': 'Delete',
     'action.moveUp': 'Move up',

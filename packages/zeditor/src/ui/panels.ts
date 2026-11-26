@@ -373,14 +373,25 @@ export function createTableTools(editor: Editor, host: HTMLElement): Disposable 
       if (!bar.contains(document.activeElement) && !handles.contains(document.activeElement)) {
         bar.hidden = true;
         handles.textContent = '';
+        if (tableId) view.domOf(tableId)?.classList.remove('z-table-active');
         tableId = null;
       }
       return;
     }
+    if (tableId !== ctx.table.id) {
+      // outline the table the tools act on (matters when tables are nested)
+      if (tableId) view.domOf(tableId)?.classList.remove('z-table-active');
+      dom.classList.add('z-table-active');
+    }
     tableId = ctx.table.id;
     bar.hidden = false;
-    const r = dom.getBoundingClientRect();
-    place(bar, { left: r.left, top: r.top, bottom: r.top, right: r.right }, { above: true });
+    // a nested table: put the bar above the outermost table so it does not cover the text of
+    // the cell around it
+    let anchorEl: HTMLElement = dom;
+    for (let t = editor.doc.closest(ctx.table.parent!, (x) => x.type === 'table'); t; t = t.parent ? editor.doc.closest(t.parent, (x) => x.type === 'table') : null) anchorEl = (view.domOf(t.id) as HTMLElement | null) ?? anchorEl;
+    const r = anchorEl.getBoundingClientRect();
+    const own = dom.getBoundingClientRect();
+    place(bar, { left: own.left, top: r.top, bottom: r.top, right: own.right }, { above: true });
     (bar.querySelector('[data-cmd=mergeCells]') as HTMLButtonElement).disabled = editor.selection?.type !== 'cell';
     // column resize handles along the first row
     const map = tableMap(ctx.table);
@@ -491,9 +502,10 @@ export function createMediaUI(editor: Editor, host: HTMLElement, uploads: Upload
         onSubmit: (url) => {
           if (!url.trim()) return;
           const at = { replace: emptyId(editor, ev?.blockId ?? ''), after: ev?.blockId };
-          if (accept.startsWith('image')) {
-            if (safeUrl(url.trim(), { image: true })) editor.exec('insertBlocks', [editor.schema.create('image', { src: url.trim() })], at);
-          } else if (safeUrl(url.trim())) editor.exec('insertBlocks', [editor.schema.create('file', { url: url.trim(), name: url.trim().split('/').pop() || 'file' })], at);
+          const ok = accept.startsWith('image') ? !!safeUrl(url.trim(), { image: true }) : !!safeUrl(url.trim());
+          if (!ok) editor.emit('ui:error', { message: editor.label('notice.badUrl', 'That address is not a valid link.') });
+          else if (accept.startsWith('image')) editor.exec('insertBlocks', [editor.schema.create('image', { src: url.trim() })], at);
+          else editor.exec('insertBlocks', [editor.schema.create('file', { url: url.trim(), name: url.trim().split('/').pop() || 'file' })], at);
           editor.focus();
         },
       });
@@ -539,7 +551,7 @@ export function createMediaUI(editor: Editor, host: HTMLElement, uploads: Upload
     }),
     editor.on('ui:files', (ev: any) => {
       if (uploads) uploads.uploadFiles(ev.files);
-      else editor.emit('ui:error', { message: 'No upload handler configured' });
+      else editor.emit('ui:error', { message: editor.label('notice.noUpload', 'Files cannot be added here: uploads are not set up.') });
     }),
     editor.on('ui:retryUpload', (ev: any) => void uploads?.retry(ev.id)),
     editor.on('ui:copyBlockLink', (ev: any) => {
@@ -549,6 +561,58 @@ export function createMediaUI(editor: Editor, host: HTMLElement, uploads: Upload
     }),
   ];
   return { destroy: () => offs.forEach((o) => o()) };
+}
+
+/* ------------------------------------------------------------------ notices */
+
+/**
+ * Short messages for the user: `ui:error` and `ui:notice` events ({ message }), failed or
+ * rejected uploads. Shown bottom-right inside the editor, announced to screen readers, closed
+ * after a few seconds. Turn off with `ui: { notices: false }` to show them your own way.
+ */
+export function createNotices(editor: Editor, host: HTMLElement, opts: { timeout?: number } = {}): Disposable & { show(message: string, kind?: 'error' | 'info'): void } {
+  const box = h('div', { class: 'z-notices', 'data-z-ignore': '', role: 'region', 'aria-label': editor.label('notice.region', 'Notifications') });
+  const live = h('div', { class: 'z-sr-only', role: 'alert', 'aria-live': 'assertive' });
+  box.append(live);
+  host.append(box);
+  const timers = new Set<any>();
+  const show = (message: string, kind: 'error' | 'info' = 'error') => {
+    if (!message) return;
+    // the same message twice in a row: restart its timer instead of stacking copies
+    for (const el of Array.from(box.querySelectorAll<HTMLElement>('.z-notice'))) if (el.dataset.msg === message) el.remove();
+    const close = h('button', { type: 'button', class: 'z-notice-close', 'aria-label': editor.label('notice.close', 'Dismiss'), html: icon('close') });
+    const el = h('div', { class: 'z-notice z-notice-' + kind, 'data-msg': message }, h('span', { class: 'z-notice-text' }, message), close);
+    const remove = () => {
+      el.classList.add('z-leaving');
+      setTimeout(() => el.remove(), 160);
+    };
+    close.addEventListener('click', remove);
+    box.append(el);
+    live.textContent = message;
+    while (box.querySelectorAll('.z-notice').length > 3) box.querySelector('.z-notice')!.remove();
+    const t = setTimeout(() => {
+      timers.delete(t);
+      remove();
+    }, opts.timeout ?? (kind === 'error' ? 6000 : 4000));
+    timers.add(t);
+  };
+  const name = (ev: any) => ev?.file?.name ?? ev?.name ?? 'file';
+  const offs = [
+    editor.on('ui:error', (ev: any) => show(String(ev?.message ?? ev ?? ''), 'error')),
+    editor.on('ui:notice', (ev: any) => show(String(ev?.message ?? ev ?? ''), ev?.kind === 'error' ? 'error' : 'info')),
+    editor.on('upload', (ev: any) => {
+      if (ev?.state === 'error') show(editor.label('notice.uploadFailed', 'Upload failed: {name}.').replace('{name}', name(ev)));
+      else if (ev?.state === 'rejected') show(editor.label(ev.reason === 'size' ? 'notice.tooLarge' : 'notice.badType', '{name} cannot be uploaded.').replace('{name}', name(ev)));
+    }),
+  ];
+  return {
+    show,
+    destroy: () => {
+      offs.forEach((o) => o());
+      timers.forEach((t) => clearTimeout(t));
+      box.remove();
+    },
+  };
 }
 
 /** Scroll to and flash the block named in the URL hash (direct links to blocks). */
@@ -583,7 +647,7 @@ export function createReviewPanel(editor: Editor, container: HTMLElement, ctl: {
     s.setSuggesting(!s.isSuggesting());
     modeBtn.setAttribute('aria-pressed', String(s.isSuggesting()));
   });
-  const fmt = (t: number) => new Date(t).toLocaleString();
+  const fmt = (t: number) => new Date(t).toLocaleString(editor.options.locale);
   const render = () => {
     threads.textContent = '';
     const list = ctl.comments?.threads() ?? [];

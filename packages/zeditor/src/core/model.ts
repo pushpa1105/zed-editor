@@ -212,10 +212,27 @@ let idGen: () => string = () => {
   for (const b of a) s += 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36];
   return 'b' + s;
 };
-export const newId = (): string => idGen();
-/** Replace the id generator (useful for deterministic tests). */
+/** set while an editor with its own `idGenerator` runs an update or command */
+let scoped: (() => string) | null = null;
+export const newId = (): string => (scoped ?? idGen)();
+/** the process-wide generator, ignoring any editor-scoped one */
+export const globalId = (): string => idGen();
+/** Replace the process-wide id generator (useful for deterministic tests). */
 export function setIdGenerator(fn: () => string): void {
   idGen = fn;
+}
+/** Valid block id: 1–64 letters, digits, `_`, `:`, `.` or `-` (UUIDs and numeric ids fit). */
+export const BLOCK_ID = /^[\w:.-]{1,64}$/;
+/** Run `fn` with `gen` as the id generator (nested calls keep the innermost). */
+export function withIdGenerator<T>(gen: (() => string) | null | undefined, fn: () => T): T {
+  if (!gen) return fn();
+  const prev = scoped;
+  scoped = gen;
+  try {
+    return fn();
+  } finally {
+    scoped = prev;
+  }
 }
 
 export class Block {

@@ -1,5 +1,11 @@
 # @z-packages/zeditor
 
+[![npm](https://img.shields.io/npm/v/@z-packages/zeditor)](https://www.npmjs.com/package/@z-packages/zeditor)
+[![CI](https://github.com/pushpa1105/zed-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/pushpa1105/zed-editor/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/@z-packages/zeditor)](https://github.com/pushpa1105/zed-editor/blob/main/packages/zeditor/LICENSE)
+
+**[Documentation](https://pushpa1105.github.io/zed-editor/)** · **[Playground](https://pushpa1105.github.io/zed-editor/playground/)** · **[Changelog](https://pushpa1105.github.io/zed-editor/docs/changelog.html)**
+
 An extensible rich-text **and** block editor. One engine, two interfaces:
 
 - **Classic mode** — a formatting toolbar and continuous document editing.
@@ -52,6 +58,8 @@ import '@z-packages/zeditor/style.css';
 </template>
 ```
 
+Events: `@ready` (the editor instance, once mounted), `@change` and `@selection` (the `Editor`).
+
 ## Three levels of customization
 
 | Level | What you write |
@@ -101,7 +109,7 @@ z.commands.insertDatabase('board', {
 });
 ```
 
-See [docs/databases.md](../../docs/databases.md) for the model, the command API and what is not implemented.
+See [docs/databases.md](https://pushpa1105.github.io/zed-editor/docs/databases.html) for the model, the command API and what is not implemented.
 
 ## Extensions
 
@@ -121,7 +129,7 @@ createEditor({ element: '#editor', extensions: [issueRef] });
 
 Nodes, marks, commands, shortcuts, input rules, paste rules, serializers, toolbar items,
 slash-menu items, block actions, typeahead sources, renderers, labels and migrations are all
-extension points. See [docs/extensions.md](../../docs/extensions.md).
+extension points. See [docs/extensions.md](https://pushpa1105.github.io/zed-editor/docs/extensions.html).
 
 ## Entry points
 
@@ -155,15 +163,22 @@ and every entry point is safe to import during SSR.
 
 ## Documentation
 
-- [Architecture](../../docs/architecture.md)
-- [Extension authoring](../../docs/extensions.md)
-- [Serialization: JSON, HTML, Markdown and their limits](../../docs/serialization.md)
-- [Databases and workspace blocks](../../docs/databases.md)
-- [Collaboration, review features and what a backend must enforce](../../docs/collaboration.md)
-- [Browser support, test coverage and the manual test checklist](../../docs/testing.md)
-- [Benchmarks](../../docs/benchmarks.md)
-- [Migration and versioning policy](../../docs/migration.md)
-- [Feature matrix vs. Lexical](../../FEATURE_MATRIX.md)
+All guides are on the documentation website, **https://pushpa1105.github.io/zed-editor/**:
+
+- [User guide: every toolbar, menu, shortcut and feature](https://pushpa1105.github.io/zed-editor/docs/user-guide.html)
+- [Commands, editor options and the Editor API](https://pushpa1105.github.io/zed-editor/docs/commands.html)
+- [Block IDs, events and syncing with a backend](https://pushpa1105.github.io/zed-editor/docs/events-and-sync.html)
+- [API reference: every export of every entry point (generated)](https://pushpa1105.github.io/zed-editor/docs/api-reference.html)
+- [Architecture](https://pushpa1105.github.io/zed-editor/docs/architecture.html)
+- [Extension authoring](https://pushpa1105.github.io/zed-editor/docs/extensions.html)
+- [Serialization: JSON, HTML, Markdown and their limits](https://pushpa1105.github.io/zed-editor/docs/serialization.html)
+- [Databases and workspace blocks](https://pushpa1105.github.io/zed-editor/docs/databases.html)
+- [Collaboration, review features and what a backend must enforce](https://pushpa1105.github.io/zed-editor/docs/collaboration.html)
+- [Browser support, test coverage and the manual test checklist](https://pushpa1105.github.io/zed-editor/docs/testing.html)
+- [Benchmarks](https://pushpa1105.github.io/zed-editor/docs/benchmarks.html)
+- [Migration and versioning policy](https://pushpa1105.github.io/zed-editor/docs/migration.html)
+- [Feature matrix vs. Lexical](https://pushpa1105.github.io/zed-editor/docs/feature-matrix.html)
+- [Changelog](https://pushpa1105.github.io/zed-editor/docs/changelog.html)
 
 ## License
 
