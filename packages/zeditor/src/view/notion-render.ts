@@ -133,7 +133,7 @@ const pageLink: InlineRenderer = (atom: InlineAtom, ctx) => {
 
 const dateChip: InlineRenderer = (atom: InlineAtom, ctx) => {
   const iso = atom.attrs?.date ?? '';
-  const el = h('time', { class: 'z-date', datetime: iso, role: 'button', tabindex: '-1', title: iso, 'aria-label': `${ctx.label('date.change')}: ${iso}` }, '@' + formatDate(iso));
+  const el = h('time', { class: 'z-date', datetime: iso, role: 'button', tabindex: '-1', title: iso, 'aria-label': `${ctx.label('date.change')}: ${iso}` }, '@' + formatDate(iso, ctx.editor.options.locale));
   el.addEventListener('click', (e) => {
     if (ctx.editor.readOnly) return;
     e.preventDefault();

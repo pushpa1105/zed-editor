@@ -10,6 +10,8 @@ import { HtmlEl, MarkSpec, NodeSpec, ParseRule, Schema, safeUrl } from './schema
 /* ------------------------------------------------------------------ tokenizer */
 
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+/** tables inside tables are kept up to this depth; deeper ones are flattened to their content */
+const MAX_TABLE_DEPTH = 4;
 const RAW = new Set(['script', 'style', 'textarea', 'title', 'noscript', 'template', 'xmp']);
 const DROP = new Set(['script', 'style', 'head', 'meta', 'link', 'title', 'template', 'noscript', 'object', 'applet', 'frame', 'frameset', 'base', 'svg', 'math', 'select', 'button', 'textarea', 'canvas', 'audio', 'video', 'iframe', 'embed', 'form', 'xml', 'o:p', 'dialog']);
 const BLOCK_TAGS = new Set(['address', 'article', 'aside', 'blockquote', 'body', 'center', 'dd', 'details', 'div', 'dl', 'dt', 'fieldset', 'figcaption', 'figure', 'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'html', 'li', 'main', 'nav', 'ol', 'p', 'pre', 'section', 'summary', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'ul', 'caption', 'colgroup']);
@@ -568,37 +570,84 @@ class Importer {
     return out;
   }
 
+  /** how many tables we are inside while reading (nested tables deeper than MAX_TABLE_DEPTH are flattened) */
+  private tableDepth = 0;
+
   table(el: HtmlEl, marks?: MarkSet): BlockJSON[] {
     const schema = this.schema;
     if (!schema.node('table')) return this.blocks(el.children, marks);
     const rows: HtmlEl[] = [];
+    let caption: HtmlEl | null = null;
+    const widths: number[] = [];
     const collect = (e: HtmlEl) => {
       for (const c of e.children) {
         if (typeof c === 'string') continue;
         if (c.tag === 'tr') rows.push(c);
         else if (c.tag === 'thead' || c.tag === 'tbody' || c.tag === 'tfoot') collect(c);
+        else if (c.tag === 'caption' && !caption) caption = c;
+        else if (c.tag === 'colgroup' || c.tag === 'col') {
+          for (const col of c.tag === 'col' ? [c] : c.children) {
+            if (typeof col === 'string' || col.tag !== 'col') continue;
+            const w = parseInt(col.style.width || col.attrs.width || '', 10);
+            const span = Math.min(50, Math.max(1, parseInt(col.attrs.span || '1', 10) || 1));
+            for (let i = 0; i < span; i++) widths.push(/px$|^\d+$/.test((col.style.width || col.attrs.width || '').trim()) && w > 0 ? w : 0);
+          }
+        }
       }
     };
     collect(el);
+    const cellsOf = (r: HtmlEl) => r.children.filter((c): c is HtmlEl => typeof c !== 'string' && (c.tag === 'td' || c.tag === 'th'));
+    // layout tables (emails, old web pages, role="presentation", a single cell): keep the content,
+    // not the grid
+    const total = rows.reduce((n, r) => n + cellsOf(r).length, 0);
+    const role = (el.attrs.role || '').toLowerCase();
+    if (role === 'presentation' || role === 'none' || total === 1 || this.tableDepth >= MAX_TABLE_DEPTH) {
+      const out: BlockJSON[] = [];
+      if (caption) out.push(...this.blocks((caption as HtmlEl).children, marks));
+      for (const r of rows) for (const c of cellsOf(r)) out.push(...this.blocks(c.children, this.marksOf(c, marks)));
+      return out;
+    }
+    this.tableDepth++;
     const rowsJ: BlockJSON[] = [];
-    for (const r of rows) {
-      const cells: BlockJSON[] = [];
-      for (const c of r.children) {
-        if (typeof c === 'string' || (c.tag !== 'td' && c.tag !== 'th')) continue;
-        const attrs: Attrs = {};
-        const cs = parseInt(c.attrs.colspan ?? '1', 10);
-        const rs = parseInt(c.attrs.rowspan ?? '1', 10);
-        if (cs > 1) attrs.colspan = Math.min(cs, 50);
-        if (rs > 1) attrs.rowspan = Math.min(rs, 200);
-        if (c.tag === 'th' || (r.parent?.tag === 'thead')) attrs.header = true;
-        let kids = this.blocks(c.children, this.marksOf(c, marks)).filter((b) => b.type !== 'table');
-        if (!kids.length) kids = [schema.create('paragraph')];
-        cells.push(schema.create('table_cell', attrs, undefined, kids));
+    try {
+      for (const r of rows) {
+        const cells: BlockJSON[] = [];
+        for (const c of cellsOf(r)) {
+          const attrs: Attrs = {};
+          const cs = parseInt(c.attrs.colspan ?? '1', 10);
+          const rs = parseInt(c.attrs.rowspan ?? '1', 10);
+          if (cs > 1) attrs.colspan = Math.min(cs, 50);
+          if (rs > 1) attrs.rowspan = Math.min(rs, 200);
+          if (c.tag === 'th' || r.parent?.tag === 'thead') attrs.header = true;
+          const bg = c.style['background-color'] || c.style.background || c.attrs.bgcolor || '';
+          if (bg && schema.node('table_cell')?.attrs?.background) {
+            const v = schema.parseAttrs(schema.node('table_cell')!.attrs, { background: bg.trim().split(/\s+/)[0] }, false).background;
+            if (v) attrs.background = v;
+          }
+          let kids = this.blocks(c.children, this.marksOf(c, marks));
+          // cell alignment applies to its paragraphs that have none of their own
+          const al = (c.style['text-align'] || c.attrs.align || r.attrs.align || '').toLowerCase();
+          if (al === 'center' || al === 'right' || al === 'justify') kids = kids.map((b) => (schema.isText(b) && schema.node(b.type)?.attrs?.align && !b.attrs?.align ? { ...b, attrs: { ...(b.attrs ?? {}), align: al } } : b));
+          kids = kids.filter((b) => schema.canContain({ type: 'table_cell' }, b.type));
+          if (!kids.length) kids = [schema.create('paragraph')];
+          cells.push(schema.create('table_cell', attrs, undefined, kids));
+        }
+        if (cells.length) rowsJ.push(schema.create('table_row', undefined, undefined, cells));
       }
-      if (cells.length) rowsJ.push(schema.create('table_row', undefined, undefined, cells));
+    } finally {
+      this.tableDepth--;
     }
     if (!rowsJ.length) return [];
-    return [schema.create('table', undefined, undefined, rowsJ)];
+    const tAttrs: Attrs = {};
+    if (widths.some((w) => w > 0)) tAttrs.colWidths = widths;
+    const out: BlockJSON[] = [];
+    // a caption becomes a bold paragraph above the table (there is no caption block)
+    if (caption) {
+      const cap = this.textBlock('paragraph', undefined, caption, (caption as HtmlEl).children, { ...(marks ?? {}), bold: true } as MarkSet);
+      if (cap.content!.length) out.push(cap);
+    }
+    out.push(schema.create('table', tAttrs, undefined, rowsJ));
+    return out;
   }
 }
 

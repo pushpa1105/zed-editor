@@ -226,11 +226,27 @@ option colours come from one `--chip` variable per `data-color`, scrollbars from
   Row data is never lost by this, but one of the two definition changes is.
 - Row page content merges like any other content.
 
+### Working with rows
+
+- **Quick search** (magnifier in the database toolbar): every word must appear in some property
+  of a row, option names included. It is view state, not saved in the document, and is also
+  available read-only. Escape clears it; Enter jumps to the first match. API:
+  `queryDatabase(db, viewId, { search })`.
+- **Row menu**: the "⋯" button on a table row, list row or card, or a right click anywhere on a
+  row (a field with selected text keeps the browser menu): Open, Insert above, Insert below,
+  Duplicate, Delete.
+- **Keyboard**: Enter, ArrowDown and ArrowUp move between rows of a column in the order the view
+  shows them (sorted views included).
+- **Calendar / timeline dragging**: drag an entry to another day to change its date; drag a
+  timeline bar to shift its start (and end) date, or its right end to change the end date (needs
+  an end date property). A click without movement still edits the title.
+- **Table**: the title column stays in place while the table scrolls sideways.
+- **Board**: "Hide empty groups" in the Group menu (`view.hideEmptyGroups`).
+
 ### Not implemented
 
 Nested filter groups (a view is either "all" or "any"), two-way relations, relations across
-documents, row templates, linked databases (one database shown in several places), dragging
-bars on the timeline or cards on the calendar to change dates, week / year calendar scales, and
+documents, row templates, linked databases (one database shown in several places), week / year calendar scales, and
 virtualized rows — every row is in the DOM (closed rows are skipped by the browser's layout
 through `content-visibility`). Collaboration granularity is unchanged: see above.
 

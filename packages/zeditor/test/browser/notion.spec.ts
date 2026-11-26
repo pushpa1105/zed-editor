@@ -84,7 +84,8 @@ test.describe('databases', () => {
     await page.keyboard.press('Tab');
     await expect(page.locator('#a .z-db-row')).toHaveCount(4);
     await page.locator('#a .z-db-row').nth(2).hover();
-    await page.locator('#a .z-db-row').nth(2).getByRole('button', { name: 'Delete row' }).click();
+    await page.locator('#a .z-db-row').nth(2).getByRole('button', { name: 'Row actions' }).click();
+    await page.getByRole('menu', { name: 'Row actions' }).getByRole('menuitem', { name: 'Delete row' }).click();
     await expect(page.locator('#a .z-db-row')).toHaveCount(3);
     expect((await model(page)).rows.map((r: any) => r.title)).toEqual(['First', 'Second', 'Added']);
     // undo steps back through database edits like any other edit
@@ -175,7 +176,8 @@ test.describe('databases', () => {
       const row = Array.from(document.querySelectorAll<HTMLElement>('#a .z-db-row')).find((r) => (r.querySelector('.z-db-cell[data-type="title"] input') as HTMLInputElement).value === 'Write docs')!;
       const r = row.getBoundingClientRect();
       const done = Array.from(document.querySelectorAll<HTMLElement>('#a .z-db-group')).find((g) => g.innerText.startsWith('Done'))!.getBoundingClientRect();
-      return { x: r.right - 6, y: r.top + 4, tx: done.left + done.width / 2, ty: r.top + 30 };
+      // (the top-right corner holds the card's "more" button)
+      return { x: r.left + 4, y: r.top + 4, tx: done.left + done.width / 2, ty: r.top + 30 };
     });
     void card;
     await page.mouse.move(from.x, from.y);

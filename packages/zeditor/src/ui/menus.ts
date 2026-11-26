@@ -278,7 +278,16 @@ export function createBlockHandles(editor: Editor, host: HTMLElement, opts: Bloc
       return;
     }
     const r = dom.getBoundingClientRect();
-    const first = (dom.querySelector('.z-content') as HTMLElement | null)?.getBoundingClientRect();
+    // align with the first visible line: a block's own text, or a database's title row. Hidden
+    // descendants (a closed database row's page) have an empty rect at the viewport's origin
+    let first: DOMRect | undefined;
+    for (const el of Array.from(dom.querySelectorAll<HTMLElement>('.z-content, .z-db-headrow')).slice(0, 8)) {
+      const rr = el.getBoundingClientRect();
+      if (rr.height > 0 && rr.top >= r.top - 1) {
+        first = rr;
+        break;
+      }
+    }
     const lh = first ? Math.min(first.height, parseFloat(getComputedStyle(dom).lineHeight) || 24) : Math.min(r.height, 28);
     box.hidden = false;
     box.style.position = 'fixed';
@@ -298,7 +307,16 @@ export function createBlockHandles(editor: Editor, host: HTMLElement, opts: Bloc
     const t = e.target as HTMLElement;
     if (box.contains(t)) return;
     if (!view.root.contains(t)) return;
-    target(view.blockIdAt(t));
+    let id = view.blockIdAt(t);
+    if (!id) {
+      // the pointer is in the editor's padding (on its way to the handle, or in the left
+      // gutter): use the block on the same line instead of hiding the handle
+      const x = view.root.getBoundingClientRect().left + (parseFloat(getComputedStyle(view.root).paddingLeft) || 0) + 12;
+      const under = document.elementFromPoint(x, e.clientY);
+      id = under && view.root.contains(under) ? view.blockIdAt(under) : null;
+      if (!id) return; // keep the current handle
+    }
+    target(id);
   };
   let frame: any = 0;
   /** positioning reads layout: at most once per frame */

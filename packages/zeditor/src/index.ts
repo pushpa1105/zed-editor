@@ -13,7 +13,7 @@ import { defaultExtensions, HeadlessOptions } from './core';
 import { EditorView, ViewOptions } from './view/view';
 import { createToolbar, createFloatingToolbar, createLinkPopover, UIHandle } from './ui/toolbar';
 import { createTypeahead, createBlockHandles } from './ui/menus';
-import { createFindPanel, createStatusBar, createPageTabs, createTableTools, createMediaUI, revealBlock } from './ui/panels';
+import { createFindPanel, createStatusBar, createPageTabs, createTableTools, createMediaUI, createNotices, revealBlock } from './ui/panels';
 import { createAutosave, createUploads, Autosave, AutosaveOptions, UploadHandler, Uploads, UploadsOptions } from './features/persist';
 import { getPages, activePage } from './core/builtin';
 import { setIcons } from './ui/icons';
@@ -119,6 +119,8 @@ export interface CreateEditorOptions extends HeadlessOptions, ViewOptions {
         find?: boolean;
         statusBar?: boolean;
         pageTabs?: boolean;
+        /** show errors and notices (failed uploads, invalid links, …) as small messages (default true) */
+        notices?: boolean;
       };
   /** 'auto' follows prefers-color-scheme */
   theme?: 'light' | 'dark' | 'auto';
@@ -172,7 +174,7 @@ export function createEditor(options: CreateEditorOptions): ZEditor {
     });
   if (options.renderMath) editor.storage.renderMath = options.renderMath;
   if (options.linkPreview) editor.storage.linkPreview = options.linkPreview;
-  const ui = options.ui === false ? null : { toolbar: true, floatingToolbar: true, slashMenu: 'block' as const, blockHandles: true, tableTools: true, find: true, statusBar: false, pageTabs: true, ...(options.ui ?? {}) };
+  const ui = options.ui === false ? null : { toolbar: true, floatingToolbar: true, slashMenu: 'block' as const, blockHandles: true, tableTools: true, find: true, statusBar: false, pageTabs: true, notices: true, ...(options.ui ?? {}) };
 
   const theme = options.theme ?? 'light';
   const wrapper = h('div', { class: 'zeditor' + (options.unstyled ? '' : ' z-theme'), 'data-mode': editor.mode, 'data-theme': theme });
@@ -222,6 +224,7 @@ export function createEditor(options: CreateEditorOptions): ZEditor {
     if (ui.tableTools && editor.hasExtension('tables')) parts.push(createTableTools(editor, wrapper));
     if (ui.statusBar) parts.push(createStatusBar(editor, bottom));
     parts.push(createLinkPopover(editor, wrapper));
+    if (ui.notices) parts.push(createNotices(editor, wrapper));
     parts.push(createMediaUI(editor, wrapper, uploads));
   } else {
     // headless UI: typeahead sources still need a menu only if the host renders one; uploads still work
@@ -236,6 +239,8 @@ export function createEditor(options: CreateEditorOptions): ZEditor {
     editor.on('selection', () => options.onSelectionChange?.(editor)),
   ];
   editor.emit('mount', { view, element: wrapper });
+  // controls whose state depends on other UI parts (e.g. Find needs the find panel) refresh now
+  editor.emit('update');
   // direct links to blocks: #<block id>
   if (typeof location !== 'undefined' && location.hash.length > 1) {
     const id = decodeURIComponent(location.hash.slice(1));
@@ -281,7 +286,7 @@ export { h as el, keyName, formatShortcut, place } from './view/dom';
 export { createToolbar, createFloatingToolbar, createLinkPopover, PALETTE, HIGHLIGHTS } from './ui/toolbar';
 export type { ToolbarOptions, UIHandle } from './ui/toolbar';
 export { createTypeahead, createBlockHandles } from './ui/menus';
-export { createFindPanel, createStatusBar, createPageTabs, createTableTools, createMediaUI, createReviewPanel, revealBlock } from './ui/panels';
+export { createFindPanel, createStatusBar, createPageTabs, createTableTools, createMediaUI, createReviewPanel, createNotices, revealBlock } from './ui/panels';
 export { icon, setIcons } from './ui/icons';
 export { MIME as CLIPBOARD_MIME } from './core/clipboard';
 void setIcons;

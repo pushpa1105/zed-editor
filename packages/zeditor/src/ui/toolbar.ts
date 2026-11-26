@@ -128,6 +128,7 @@ export function createToolbar(editor: Editor, opts: ToolbarOptions = {}): UIHand
   const list: (ToolbarItem | '|')[] = [];
   if (opts.items) for (const id of opts.items) {
     if (id === '|') list.push('|');
+    else if (id === 'insert' && !opts.floating) list.push('insert' as any);
     else if (byId.has(id)) list.push(byId.get(id)!);
   }
   else {
@@ -140,9 +141,14 @@ export function createToolbar(editor: Editor, opts: ToolbarOptions = {}): UIHand
   }
   const updaters: (() => void)[] = [];
   const text = (key: string) => editor.label(key);
+  let insertSlot: HTMLElement | null = null;
   for (const it of list) {
     if (it === '|') {
       dom.append(h('span', { class: 'z-sep', role: 'separator', 'aria-orientation': 'vertical' }));
+      continue;
+    }
+    if ((it as any) === 'insert') {
+      dom.append((insertSlot = h('span', { hidden: true })));
       continue;
     }
     const label = text(it.label);
@@ -164,7 +170,8 @@ export function createToolbar(editor: Editor, opts: ToolbarOptions = {}): UIHand
           let extra = sel.querySelector<HTMLOptionElement>('option[data-extra]');
           if (!extra) sel.append((extra = h('option', { 'data-extra': '', disabled: true })));
           extra.value = v;
-          extra.textContent = text('block.' + v) === 'block.' + v ? v : text('block.' + v);
+          // no label for this type (table, image, database…): show its name readably
+          extra.textContent = text('block.' + v) === 'block.' + v ? v.charAt(0).toUpperCase() + v.slice(1).replace(/_/g, ' ') : text('block.' + v);
         }
         if (sel.value !== v) sel.value = v;
         sel.disabled = editor.readOnly;
@@ -264,6 +271,7 @@ export function createToolbar(editor: Editor, opts: ToolbarOptions = {}): UIHand
     });
     const firstSep = dom.querySelector('.z-sep');
     if (firstSep && !opts.items) firstSep.after(ins, h('span', { class: 'z-sep', role: 'separator', 'aria-orientation': 'vertical' }));
+    else if (insertSlot) insertSlot.replaceWith(ins);
     else dom.append(ins);
   }
   roving(dom, '.z-tool');
@@ -379,7 +387,7 @@ export function createLinkPopover(editor: Editor, host: HTMLElement): { destroy(
       close(false);
       editor.focus();
       if (!href) editor.exec('unsetLink');
-      else if (!editor.exec('setLink', href)) editor.emit('ui:error', { message: 'Invalid link' });
+      else if (!editor.exec('setLink', href)) editor.emit('ui:error', { message: editor.label('notice.badUrl', 'That address is not a valid link.') });
     };
     const remove = h('button', { type: 'button', class: 'z-btn', onclick: () => {
       close(false);

@@ -1,4 +1,5 @@
-import { Attrs, Block, BlockJSON, Doc, DocJSON, Inline, MarkSet, contentLength, jsonEq, setIdGenerator } from './model';
+import { Attrs, Block, BlockJSON, Doc, DocJSON, Inline, MarkSet, contentLength, jsonEq, setIdGenerator, withIdGenerator, globalId, BLOCK_ID } from './model';
+import { summarizeTransaction, BlockChanges, BlockCreated, BlockUpdated, BlockDeleted, BlockMoved, BlockCompleted, BLOCK_EVENTS } from './events';
 import { Schema, clone } from './schema';
 import { Selection, fixSelection, mapSelection, selEq, firstTextBlock, textSel } from './selection';
 import { Step, applyStep, touched } from './steps';
@@ -21,6 +22,12 @@ export interface EditorOptions {
   /** label overrides, merged over the defaults */
   labels?: Record<string, string>;
   locale?: string;
+  /**
+   * Make ids for new blocks, e.g. `() => crypto.randomUUID()` or ids reserved by your backend.
+   * Must return 1–64 characters of letters, digits, `_ : . -`; an invalid or already used id
+   * falls back to the built-in generator (with a console warning).
+   */
+  idGenerator?: () => string;
 }
 
 export interface UpdateOptions {
@@ -52,6 +59,19 @@ export interface EditorEvents {
   blur: undefined;
   issues: { issues: string[] };
   destroy: undefined;
+  /** every block change of one transaction (see core/events.ts) */
+  blocks: BlockChanges;
+  'block:created': BlockCreated & { origin: string };
+  'block:updated': BlockUpdated & { origin: string };
+  'block:deleted': BlockDeleted & { origin: string };
+  'block:moved': BlockMoved & { origin: string };
+  /** a check-list item (any block with a `checked` attribute) was checked */
+  'block:completed': BlockCompleted & { origin: string };
+  'block:uncompleted': BlockCompleted & { origin: string };
+  /** the caret / block selection moved into another block (`id` null: no selection) */
+  'block:focus': { id: string | null; previous: string | null };
+  /** block ids were renamed with `remapIds` (old id → new id) */
+  'ids:remapped': { map: Record<string, string> };
   [custom: string]: any;
 }
 
@@ -319,12 +339,33 @@ export class Editor {
   private cleanups: (() => void)[] = [];
   private resolved: ResolvedExtensions;
   private builtinHistory: History | null = null;
+  private idGen: (() => string) | null = null;
+  private activeBlock: string | null = null;
 
   constructor(options: EditorOptions = {}) {
     this.options = options;
     this.mode = options.mode ?? 'classic';
     this.readOnly = !!options.readOnly;
     this.schema = new Schema();
+    if (options.idGenerator) {
+      const user = options.idGenerator;
+      let warned = false;
+      this.idGen = () => {
+        for (let i = 0; i < 5; i++) {
+          let id: string;
+          try {
+            id = String(user());
+          } catch {
+            break;
+          }
+          if (BLOCK_ID.test(id) && !this.doc?.has(id)) return id;
+        }
+        if (!warned) console.warn('[zeditor] idGenerator returned an invalid or duplicate id; using a generated one');
+        warned = true;
+        return globalId();
+      };
+      this.schema.idGenerator = this.idGen;
+    }
     const r = (this.resolved = resolveExtensions([...(options.baseExtensions ?? []), ...(options.extensions ?? [])], this.schema));
     this.extensions = r.extensions;
     this.inputRules = r.inputRules;
@@ -339,12 +380,14 @@ export class Editor {
       const fn = r.commands[name];
       (this.commands as any)[name] = (...args: any[]) => {
         if (this.destroyed) return false;
-        return fn(this, ...args);
+        return withIdGenerator(this.idGen, () => fn(this, ...args));
       };
     }
     if (options.history === false) this.history = { undo: () => false, redo: () => false, canUndo: () => false, canRedo: () => false };
     else this.history = this.builtinHistory = new History(this, options.history?.delay ?? 600, options.history?.depth ?? 500);
-    this.load(options.content ?? null);
+    withIdGenerator(this.idGen, () => this.load(options.content ?? null));
+    const s0 = this.selection;
+    this.activeBlock = s0?.type === 'text' ? s0.focus.id : null;
     for (const ext of this.extensions) {
       const c = ext.setup?.(this);
       if (typeof c === 'function') this.cleanups.push(c);
@@ -362,6 +405,10 @@ export class Editor {
   emit<K extends keyof EditorEvents>(event: K, payload?: EditorEvents[K]): void {
     const set = this.listeners.get(event as string);
     if (set) for (const fn of [...set]) fn(payload);
+  }
+  /** whether anything listens to `event` (UI parts use it to detect a missing handler) */
+  hasListener(event: string): boolean {
+    return !!this.listeners.get(event)?.size;
   }
   /** number of registered listeners (for leak tests) */
   listenerCount(): number {
@@ -428,6 +475,37 @@ export class Editor {
       fn(this.tr);
       return true;
     }
+    return withIdGenerator(this.idGen, () => this.commit(fn, opts));
+  }
+  private hasListeners(names: readonly string[]): boolean {
+    for (const n of names) if (this.listeners.get(n)?.size) return true;
+    return false;
+  }
+  private emitBlockEvents(tr: Transaction, origin: string): void {
+    if (!this.hasListeners(BLOCK_EVENTS)) return;
+    const c = summarizeTransaction(tr.steps, tr.inverse, this.doc, origin);
+    if (!c.created.length && !c.updated.length && !c.deleted.length && !c.moved.length) return;
+    this.emit('blocks', c);
+    for (const x of c.created) this.emit('block:created', { ...x, origin });
+    for (const x of c.updated) this.emit('block:updated', { ...x, origin });
+    for (const x of c.deleted) this.emit('block:deleted', { ...x, origin });
+    for (const x of c.moved) this.emit('block:moved', { ...x, origin });
+    for (const x of c.completed) this.emit('block:completed', { ...x, origin });
+    for (const x of c.uncompleted) this.emit('block:uncompleted', { ...x, origin });
+  }
+  private emitFocus(): void {
+    const s = this.selection;
+    const id = s?.type === 'text' ? s.focus.id : s?.type === 'block' ? (s.ids[0] ?? null) : s?.type === 'cell' ? s.focus : null;
+    if (id === this.activeBlock) return;
+    const previous = this.activeBlock;
+    this.activeBlock = id;
+    this.emit('block:focus', { id, previous });
+  }
+  /** id of the block holding the caret (or the first selected block) */
+  get activeBlockId(): string | null {
+    return this.activeBlock;
+  }
+  private commit(fn: (tr: Transaction) => void, opts: UpdateOptions): boolean {
     const tr = (this.tr = new Transaction(this));
     const origin = opts.origin ?? 'local';
     tr.meta.origin = origin;
@@ -471,9 +549,88 @@ export class Editor {
     }
     const ev: TransactionEvent = { tr, docChanged, selectionChanged, origin };
     this.emit('transaction', ev);
-    if (docChanged) this.emit('change', ev);
-    if (selectionChanged) this.emit('selection', { selection: next });
+    if (docChanged) {
+      this.emit('change', ev);
+      this.emitBlockEvents(tr, origin);
+    }
+    if (selectionChanged) {
+      this.emit('selection', { selection: next });
+      this.emitFocus();
+    }
     this.emit('update');
+    return true;
+  }
+
+  /**
+   * Rename blocks, e.g. to the ids your backend assigned after saving them.
+   * References to the old ids inside other blocks (relations, synced copies, sub-page parents,
+   * page links) are updated too, and so are the undo / redo history and the selection.
+   * The rename is not an undo step. Returns false (and changes nothing) when a new id is
+   * invalid, already used, or an old id does not exist.
+   */
+  remapIds(map: Record<string, string>): boolean {
+    const pairs = Object.entries(map).filter(([a, b]) => a !== b);
+    if (!pairs.length) return true;
+    const targets = new Set<string>();
+    for (const [from, to] of pairs) {
+      if (from === 'root' || !this.doc.has(from) || !BLOCK_ID.test(to) || targets.has(to) || (this.doc.has(to) && !map[to])) return false;
+      targets.add(to);
+    }
+    const m = new Map(pairs);
+    const swap = (x: any): any => {
+      if (typeof x === 'string') return m.get(x) ?? x;
+      if (Array.isArray(x)) return x.map(swap);
+      if (x && typeof x === 'object') {
+        const o: any = {};
+        for (const k in x) o[k] = k === 'text' ? x[k] : swap(x[k]);
+        return o;
+      }
+      return x;
+    };
+    const renameJSON = (j: BlockJSON): BlockJSON => ({ ...swap({ ...j, children: undefined, content: undefined }), ...(j.content ? { content: swap(j.content) } : {}), ...(j.children ? { children: j.children.map(renameJSON) } : {}) });
+    // topmost renamed blocks are replaced (with their subtree); other blocks only get their
+    // references rewritten
+    const renamedTop = [...m.keys()].filter((id) => {
+      for (let p = this.doc.get(id)!.parent; p && p.id !== 'root'; p = p.parent) if (m.has(p.id)) return false;
+      return true;
+    });
+    const inside = (b: Block) => {
+      for (let p: Block | null = b; p && p.id !== 'root'; p = p.parent) if (renamedTop.includes(p.id)) return true;
+      return false;
+    };
+    const selection = swap(this.selection);
+    const ok = this.update(
+      (tr) => {
+        for (const b of this.doc.descendants()) {
+          if (inside(b)) continue;
+          const a = swap(b.attrs);
+          if (JSON.stringify(a) !== JSON.stringify(b.attrs)) tr.step({ t: 'attrs', id: b.id, attrs: a });
+          if (b.content) {
+            const c = swap(b.content);
+            if (JSON.stringify(c) !== JSON.stringify(b.content)) tr.step({ t: 'text', id: b.id, from: 0, to: contentLength(b.content), insert: c });
+          }
+        }
+        for (const id of renamedTop) {
+          const b = this.doc.get(id)!;
+          const parent = b.parent!.id;
+          const index = b.parent!.children!.indexOf(b);
+          const json = renameJSON(b.toJSON());
+          tr.removeAt(parent, index, 1);
+          tr.insert(parent, index, [json]);
+        }
+        tr.select(selection);
+        tr.setMeta('remap', map);
+      },
+      { history: false, origin: 'remap' },
+    );
+    if (!ok) return false;
+    const h = this.builtinHistory;
+    if (h) {
+      h.undoStack = swap(h.undoStack).map((e: any, i: number) => ({ ...e, time: h.undoStack[i].time }));
+      h.redoStack = swap(h.redoStack).map((e: any, i: number) => ({ ...e, time: h.redoStack[i].time }));
+    }
+    if (this.activeBlock && m.has(this.activeBlock)) this.activeBlock = m.get(this.activeBlock)!;
+    this.emit('ids:remapped', { map: Object.fromEntries(pairs) });
     return true;
   }
 

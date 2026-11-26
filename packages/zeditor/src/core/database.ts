@@ -97,6 +97,8 @@ export interface DbView {
   /** property ids hidden in this view */
   hidden?: string[];
   calc?: Record<string, DbCalc>;
+  /** board / grouped views: hide groups without rows */
+  hideEmptyGroups?: boolean;
 }
 
 /* ------------------------------------------------------------------ validation (documents are untrusted) */
@@ -145,6 +147,7 @@ function cleanViews(x: any): DbView[] {
     if (sorts.length) view.sorts = sorts;
     if (typeof v.groupBy === 'string' && ID.test(v.groupBy)) view.groupBy = v.groupBy;
     if (v.filterMode === 'or') view.filterMode = 'or';
+    if (v.hideEmptyGroups === true) view.hideEmptyGroups = true;
     if (typeof v.dateProp === 'string' && ID.test(v.dateProp)) view.dateProp = v.dateProp;
     if (typeof v.endProp === 'string' && ID.test(v.endProp)) view.endProp = v.endProp;
     const hidden = (Array.isArray(v.hidden) ? v.hidden.slice(0, 100) : []).filter((h: any) => typeof h === 'string' && ID.test(h));
@@ -417,7 +420,7 @@ export interface DbResult {
 }
 
 /** Evaluate a view: filter, sort, group and calculate. Pure; does not touch the document. */
-export function queryDatabase(db: Block, viewId?: string): DbResult {
+export function queryDatabase(db: Block, viewId?: string, opts: { search?: string } = {}): DbResult {
   const properties = dbProperties(db);
   const view = dbViews(db).find((v) => v.id === viewId) ?? dbActiveView(db);
   const byId = new Map(properties.map((p) => [p.id, p]));
@@ -426,6 +429,14 @@ export function queryDatabase(db: Block, viewId?: string): DbResult {
   const filters = (view.filters ?? []).filter((f) => byId.has(f.prop));
   const test = (r: Block, f: DbFilter) => matches(r, byId.get(f.prop)!, f, ctx);
   let rows = !filters.length ? all : all.filter((r) => (view.filterMode === 'or' ? filters.some((f) => test(r, f)) : filters.every((f) => test(r, f))));
+  // quick search: every word must appear in some property of the row (case-insensitive)
+  const words = (opts.search ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length) {
+    rows = rows.filter((r) => {
+      const hay = properties.map((p) => cellText(r, p, ctx)).join('\n').toLowerCase();
+      return words.every((w) => hay.includes(w));
+    });
+  }
   const sorts = (view.sorts ?? []).filter((s) => byId.has(s.prop));
   if (sorts.length) {
     const order = new Map(all.map((r, i) => [r.id, i]));
@@ -449,6 +460,7 @@ export function queryDatabase(db: Block, viewId?: string): DbResult {
     const g = groupBy;
     groups = [{ option: null as DbOption | null, rows: [] as Block[] }, ...(g.options ?? []).map((o) => ({ option: o as DbOption | null, rows: [] as Block[] }))];
     for (const r of rows) (groups.find((x) => x.option?.id === cellValue(r, g, ctx)) ?? groups[0]).rows.push(r);
+    if (view.hideEmptyGroups) groups = groups.filter((x) => x.rows.length);
   }
   const hidden = new Set(view.hidden ?? []);
   const calc: Record<string, string> = {};

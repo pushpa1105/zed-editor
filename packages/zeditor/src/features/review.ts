@@ -95,7 +95,11 @@ export const commentsExtension: Extension = {
       parseHTML: [{ tag: 'span', match: (el) => !!el.attrs['data-comment'], getAttrs: (el) => ({ ids: el.attrs['data-comment'].split(/\s+/).filter(Boolean) }) }],
     },
   ],
-  toolbar: [{ id: 'comment', group: 'review', label: 'comment.add', icon: 'comment', run: (e) => void e.emit('ui:comment'), enabled: (e) => !!e.selection && e.selection.type === 'text' && !(e.selection.anchor.id === e.selection.focus.id && e.selection.anchor.offset === e.selection.focus.offset), floating: true, order: 80 }],
+  toolbar: [{ id: 'comment', group: 'review', label: 'comment.add', icon: 'comment', run: (e) => {
+        if (e.hasListener('ui:comment')) return void e.emit('ui:comment');
+        e.emit('ui:error', { message: e.label('comment.unavailable', 'Comments are not available in this editor.') });
+        console.warn('[zeditor] the Comment button needs a comments UI: call createComments() and createReviewPanel(), or listen to "ui:comment" yourself, or disable it with features: { comments: false }');
+      }, enabled: (e) => !!e.selection && e.selection.type === 'text' && !(e.selection.anchor.id === e.selection.focus.id && e.selection.anchor.offset === e.selection.focus.offset), floating: true, order: 80 }],
   labels: {
     'comment.add': 'Comment',
     'comment.placeholder': 'Add a comment…',

@@ -18,6 +18,12 @@ failing. npm publication has **not** been done (owner action).
 | Added on request: SEO / SSR rendering, tree-shakeable packaging, performance work | done |
 | Added on request (session 2): Notion-style databases (table / board / list / gallery, typed properties, filters, sorts, grouping, calculations, rows as pages) and workspace blocks (table of contents, bookmarks, page links, dates, template buttons, toggle headings) | done — see docs/databases.md |
 | Added on request (session 3): formula / relation / rollup properties, custom property types, calendar and timeline views, match-any filters, column resize and drag reorder, card reordering, redesigned database UI and scrollbars, toolbar Insert menu, sub-pages with breadcrumbs, synced copies | done — see docs/databases.md |
+| Session 4 fixes and additions: block handle next to databases (was placed off-screen, vanished on the way to it), wheel over databases / tables now scrolls the page, quick search, row menu (button + right click), arrow-key row navigation, calendar / timeline drag to change dates, sticky table title column, hide empty board groups, active view tab kept in sight | done — see docs/databases.md "Working with rows" |
+| Session 4, on request: backend block IDs (`idGenerator`, `remapIds`), block events (`blocks`, `block:created/updated/deleted/moved/completed/uncompleted/focus`), `createBlockSync` / `applyBlockChanges`, "New" always shows the new row (calendar / timeline / board), user guide | done — see docs/events-and-sync.md, docs/user-guide.md |
+| Session 4, on request: no silent failures (built-in notices for ui:error / failed uploads, Comment fallback message), Find toolbar button, custom toolbar keeps Insert position, grouping in table / list / gallery with folding sections, playground database examples (task tracker, content calendar, reading list, linked customers / deals) | done |
+| Session 4, on request: complex and nested tables — HTML import keeps tables inside cells (4 levels), captions, column widths, colours, alignment; unwraps layout tables; Markdown writes complex tables as HTML; table tools mark the active nested table; playground "Complex tables" example | done |
+| Session 4, on request: documentation of every feature — docs/commands.md (all commands, editor options, Editor API, UI events), generated docs/api-reference.md (every export), `pnpm docs:check` in `pnpm check`; `locale` option now formats dates | done |
+| Session 5, on request: release preparation — CHANGELOG.md (0.1.0), RELEASING.md, CONTRIBUTING.md, `pnpm release` / `release:notes` scripts, documentation website (`pnpm site`, live demo, search, all docs, playground and examples) deployed to GitHub Pages, CI / Pages / Release GitHub Actions workflows, issue and PR templates, Dependabot, npm metadata | done — see RELEASING.md |
 
 Per-capability status, evidence and the list of known gaps: [FEATURE_MATRIX.md](FEATURE_MATRIX.md).
 
@@ -64,8 +70,8 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
 4. **Databases, next steps** (docs/databases.md "Not implemented"): finer-grained
    collaboration (cells of one row and the schema are still last-writer-wins — moving cells and
    properties into their own shared maps in `collab.ts` would fix that), row virtualization,
-   two-way relations, nested filter groups, linked databases, row templates, dragging calendar
-   cards / timeline bars to change dates, editable (two-way) synced blocks.
+   two-way relations, nested filter groups, linked databases, row templates, editable (two-way)
+   synced blocks.
    Bundle: databases are still part of the base bundle, which grew from 84.9 to 95.7 kB gzipped
    in session 3 (style.css 6.8 → 9.3 kB); splitting them into an optional entry is the fix.
    Templates: template buttons exist; a cross-document template gallery does not.
@@ -80,11 +86,17 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
    group them into layout-contained chunks. Paged documents already avoid the cost.
 9. **Playground test** — the playground was checked visually (`scripts/shots.mjs`) but has no
    automated test.
-10. **Release housekeeping** — pick the final package name / scope, add a CHANGELOG and CI
-    workflow (`pnpm check` on Windows, macOS and Linux), decide whether to ship source maps
-    (they are ~70 % of the unpacked tarball).
+10. **First release (owner actions)** — enable *Settings → Pages → Source: GitHub Actions*; set up
+    npm publishing (`NPM_TOKEN` secret or trusted publishing) and confirm the `@z-packages` scope;
+    then push the tag `v0.1.0` (RELEASING.md). Still open: whether to ship source maps (~70 % of the
+    unpacked tarball). `node scripts/shots-site.mjs <dir>` screenshots the website and fails on
+    broken links or console errors.
 
 ## Notes for whoever resumes
+
+- After changing anything public, run `pnpm docs:api` (regenerates docs/api-reference.md) and
+  `pnpm docs:check` (fails on undocumented commands, events, toolbar items, options or a stale
+  reference). New commands need a line in docs/commands.md.
 
 - Shell heredocs are unreliable in this environment (Git Bash on Windows): write files with an
   editor tool, and do multi-line patches from a `.cjs` script file rather than `node -e`.
