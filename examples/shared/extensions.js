@@ -1,7 +1,7 @@
 // Framework-independent extensions shared by the plain HTML, React and Vue examples.
 // They use only public exports of the package. Documents saved by one example open in the
 // others; each host may override how the nodes are rendered (see the React and Vue apps).
-import { textSel, escapeHTML } from '@z-packages/zeditor';
+import { textSel, escapeHTML } from '@buffmomo/zeditor';
 
 /** Demo data. A real host passes its own `search` function. */
 export const DEMO_ISSUES = [

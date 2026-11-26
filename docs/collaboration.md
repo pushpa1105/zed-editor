@@ -1,12 +1,12 @@
 # Collaboration and review
 
-Collaboration is an optional module: `@z-packages/zeditor/collab` (peer dependencies `yjs` and
+Collaboration is an optional module: `@buffmomo/zeditor/collab` (peer dependencies `yjs` and
 `y-protocols`). Nothing in the base bundle references it.
 
 ```js
 import * as Y from 'yjs';
-import { createEditor } from '@z-packages/zeditor';
-import { createCollab, connectSync, webSocketTransport, yCommentStore } from '@z-packages/zeditor/collab';
+import { createEditor } from '@buffmomo/zeditor';
+import { createCollab, connectSync, webSocketTransport, yCommentStore } from '@buffmomo/zeditor/collab';
 
 const z = createEditor({ element: '#editor' });
 const doc = new Y.Doc();
@@ -95,7 +95,7 @@ presence immediately; a crashed client times out via the awareness protocol (30 
 ## Comments
 
 ```js
-import { createComments, createReviewPanel } from '@z-packages/zeditor';
+import { createComments, createReviewPanel } from '@buffmomo/zeditor';
 const comments = createComments(editor, { user, store: yCommentStore(doc), permissions });
 comments.addThread('Is this right?');   // anchors to the current selection
 ```

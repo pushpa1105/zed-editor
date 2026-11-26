@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `@z-packages/zeditor` are recorded here.
+All notable changes to `@buffmomo/zeditor` are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the package uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). How releases are cut is described in
 [RELEASING.md](RELEASING.md).
@@ -25,7 +25,7 @@ First public release.
 
 - **Engine**: a document model, schema, steps, transactions, history, selection and commands written
   from scratch in TypeScript, with no editor framework underneath and no runtime dependencies in the base
-  bundle. It runs headless in Node, workers and SSR (`@z-packages/zeditor/core`).
+  bundle. It runs headless in Node, workers and SSR (`@buffmomo/zeditor/core`).
 - **Two interfaces on one engine**: *Classic* (toolbar, continuous document) and *Blocks* (slash
   menu, block handles, nesting, drag to reorder). Switching keeps the document, caret, scroll
   position and undo history.
@@ -41,7 +41,7 @@ First public release.
   buttons, synced copies, and sub-pages with breadcrumbs.
 - **Serialization**: lossless JSON, HTML and Markdown import and export, rich clipboard, and server-side
   rendering (`renderToHTML`, `renderToText`) for SEO.
-- **Collaboration and review** (`@z-packages/zeditor/collab`): Yjs binding, presence, offline recovery,
+- **Collaboration and review** (`@buffmomo/zeditor/collab`): Yjs binding, presence, offline recovery,
   comments, suggestions and version history.
 - **Backend sync**: stable block IDs (`idGenerator`, `remapIds`), block events
   (`block:created/updated/deleted/moved/…`) and `createBlockSync` / `applyBlockChanges`.

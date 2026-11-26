@@ -354,7 +354,7 @@ java, c, cpp, csharp, go, rust, ruby, php, sql, bash, yaml, markdown, xml, swift
 **Copy code** button. Formatting marks are not allowed inside code.
 
 Colour highlighting is optional: the app must add `codeHighlightExtension()` from
-`@z-packages/zeditor/code-highlight`. It colours keywords, strings, comments, numbers, function
+`@buffmomo/zeditor/code-highlight`. It colours keywords, strings, comments, numbers, function
 calls and tags, and needs a browser with the CSS Custom Highlight API; others show plain code.
 
 ### Callouts
@@ -853,8 +853,8 @@ Tested browsers, screen readers and the manual checklist: [testing.md](./testing
 ## 14. Configuration cheat sheet
 
 ```js
-import { createEditor } from '@z-packages/zeditor';
-import '@z-packages/zeditor/style.css';
+import { createEditor } from '@buffmomo/zeditor';
+import '@buffmomo/zeditor/style.css';
 
 const z = createEditor({
   element: '#editor',
@@ -947,7 +947,7 @@ shortcuts and Markdown shortcuts.
 | `renderMath` | Equation rendering |
 | `mentions` | `{ search, trigger }` for the `@` menu |
 | `theme`, `unstyled`, `icons`, `labels`, `maxHeight` | Look and text |
-| `extensions` | Add your own blocks, marks, shortcuts, menu items ([extensions.md](./extensions.md)); e.g. `codeHighlightExtension()` from `@z-packages/zeditor/code-highlight` |
+| `extensions` | Add your own blocks, marks, shortcuts, menu items ([extensions.md](./extensions.md)); e.g. `codeHighlightExtension()` from `@buffmomo/zeditor/code-highlight` |
 | `onChange`, `onSelectionChange`, `onReady` | Callbacks |
 
 ---

@@ -10,7 +10,7 @@ You need Node 18 or newer (CI uses 24) and pnpm 10 (`corepack enable` installs t
 ```sh
 pnpm install
 pnpm build
-pnpm --filter @z-packages/zeditor exec playwright install chromium firefox webkit   # once, for browser tests
+pnpm --filter @buffmomo/zeditor exec playwright install chromium firefox webkit   # once, for browser tests
 pnpm playground        # http://127.0.0.1:4173/
 ```
 
@@ -41,7 +41,7 @@ pnpm playground        # http://127.0.0.1:4173/
    pnpm check        # build, typecheck, docs check, unit tests, browser tests, packed tarball
    ```
 
-   For quicker loops, use `pnpm test`, or `pnpm --filter @z-packages/zeditor exec playwright test some.spec.ts --project=chromium`.
+   For quicker loops, use `pnpm test`, or `pnpm --filter @buffmomo/zeditor exec playwright test some.spec.ts --project=chromium`.
    Browser tests load `packages/zeditor/dist`, so rebuild first (`SKIP_TYPES=1 node build.mjs`
    inside `packages/zeditor` is the fast way).
 6. For visual changes, attach before and after screenshots to the pull request. `node scripts/shots.mjs <dir>` and

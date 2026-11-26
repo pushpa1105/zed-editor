@@ -1,5 +1,5 @@
 /**
- * Optional collaboration module (Yjs). Import from `@z-packages/zeditor/collab`.
+ * Optional collaboration module (Yjs). Import from `@buffmomo/zeditor/collab`.
  *
  * Shared structure:
  *   ydoc.getArray('blocks') : Y.Array<Y.Map>

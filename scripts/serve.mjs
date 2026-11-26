@@ -2,7 +2,7 @@
 // Usage: node scripts/serve.mjs [port] [folder]   (default 4173, the repository root)
 //   node scripts/serve.mjs 4180 _site   serves the built documentation website (`pnpm site:serve`)
 // The built package is exposed at the path a real install would have:
-//   /node_modules/@z-packages/zeditor/...  ->  packages/zeditor/...
+//   /node_modules/@buffmomo/zeditor/...  ->  packages/zeditor/...
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -28,7 +28,7 @@ const types = {
 };
 
 function mapPath(urlPath) {
-  const m = /^(?:\/[^?]*)?\/node_modules\/@z-packages\/zeditor\/(.*)$/.exec(urlPath);
+  const m = /^(?:\/[^?]*)?\/node_modules\/@buffmomo\/zeditor\/(.*)$/.exec(urlPath);
   if (m) return join(root, 'packages', 'zeditor', m[1]);
   const y = /^(?:\/[^?]*)?\/node_modules\/(yjs|y-protocols|lib0)\/(.*)$/.exec(urlPath);
   if (y) return join(root, 'packages', 'zeditor', 'node_modules', y[1], y[2]);

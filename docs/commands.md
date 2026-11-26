@@ -76,7 +76,7 @@ Base feature.
 | `selectBlocks(ids)` | Select whole blocks (block selection, as Esc does in blocks mode) |
 | `selectCurrentBlock()` | Select the block holding the caret |
 | `undo()` / `redo()` | Undo / redo (the built-in history, or collaboration's history when installed) |
-| `editor.setSelection(sel)` | Set a selection object: `textSel(id, offset, focusId?, focusOffset?)`, `blockSel(ids)`, or a cell selection `{ type: 'cell', table, anchor, focus }` (helpers in `@z-packages/zeditor/core`) |
+| `editor.setSelection(sel)` | Set a selection object: `textSel(id, offset, focusId?, focusOffset?)`, `blockSel(ids)`, or a cell selection `{ type: 'cell', table, anchor, focus }` (helpers in `@buffmomo/zeditor/core`) |
 | `editor.cutHistory()` | The next change starts a new undo step (instead of merging with typing) |
 
 ## Lists, layout and media
@@ -241,7 +241,7 @@ them too, plus its UI options ([user guide §14](user-guide.md)).
 | `getState()` / `subscribe(fn)` | A snapshot for UI frameworks (active marks, block type, can undo / redo, counts, …) and change notifications. The React / Vue adapters use these |
 | `setMode(mode)` / `setReadOnly(flag)` / `focus()` / `destroy()` | — |
 
-Browser-only helpers exported from `@z-packages/zeditor` for building your own UI from parts:
+Browser-only helpers exported from `@buffmomo/zeditor` for building your own UI from parts:
 `createToolbar`, `createFloatingToolbar`, `createLinkPopover`, `createTypeahead`,
 `createBlockHandles`, `createFindPanel`, `createStatusBar`, `createPageTabs`, `createTableTools`,
 `createMediaUI`, `createReviewPanel`, `createNotices`, `inlinePrompt`, `revealBlock`

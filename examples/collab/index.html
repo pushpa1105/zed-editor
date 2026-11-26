@@ -4,12 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>zeditor — two-client collaboration example</title>
-    <link rel="stylesheet" href="./node_modules/@z-packages/zeditor/dist/style.css" />
+    <link rel="stylesheet" href="./node_modules/@buffmomo/zeditor/dist/style.css" />
     <script type="importmap">
       {
         "imports": {
-          "@z-packages/zeditor": "./node_modules/@z-packages/zeditor/dist/zeditor.browser.js",
-          "@z-packages/zeditor/collab": "./node_modules/@z-packages/zeditor/dist/zeditor.collab.browser.js"
+          "@buffmomo/zeditor": "./node_modules/@buffmomo/zeditor/dist/zeditor.browser.js",
+          "@buffmomo/zeditor/collab": "./node_modules/@buffmomo/zeditor/dist/zeditor.collab.browser.js"
         }
       }
     </script>
@@ -37,8 +37,8 @@
     </main>
 
     <script type="module">
-      import { createEditor } from '@z-packages/zeditor';
-      import { Y, createCollab, connectSync, memoryHub, broadcastChannelTransport, yCommentStore } from '@z-packages/zeditor/collab';
+      import { createEditor } from '@buffmomo/zeditor';
+      import { Y, createCollab, connectSync, memoryHub, broadcastChannelTransport, yCommentStore } from '@buffmomo/zeditor/collab';
 
       const room = new URLSearchParams(location.search).get('room');
       const hub = memoryHub();

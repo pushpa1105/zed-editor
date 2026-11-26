@@ -4,7 +4,7 @@ An extension is a plain object. Everything the editor ships with is built this w
 extension can do anything a built-in feature does.
 
 ```ts
-import { defineExtension, type Extension } from '@z-packages/zeditor';
+import { defineExtension, type Extension } from '@buffmomo/zeditor';
 
 export const myExtension: Extension = defineExtension({
   name: 'my-extension',        // unique; an extension with the same name replaces an earlier one
@@ -92,7 +92,7 @@ A command returns `true` when it did something. Use `editor.update(tr => …)` f
 is atomic and undoable. Add types by augmenting the `Commands` interface:
 
 ```ts
-declare module '@z-packages/zeditor' {
+declare module '@buffmomo/zeditor' {
   interface Commands { insertNotice(attrs?: { tone?: string }): boolean }
 }
 ```

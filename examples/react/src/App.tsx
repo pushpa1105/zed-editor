@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ZEditor, useEditorState, type ZEditorInstance, type InlineViewProps } from '@z-packages/zeditor/react';
-import type { Extension } from '@z-packages/zeditor';
+import { ZEditor, useEditorState, type ZEditorInstance, type InlineViewProps } from '@buffmomo/zeditor/react';
+import type { Extension } from '@buffmomo/zeditor';
 import { issueRefExtension, calloutExtension, DEMO_ISSUES, SHARED_DOCUMENT } from '../../shared/extensions.js';
 
 /** Pretend backend: answers after a delay and honours cancellation. */

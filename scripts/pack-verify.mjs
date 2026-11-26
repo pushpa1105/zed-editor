@@ -113,7 +113,7 @@ await check('vanilla: no-build HTML example runs from node_modules in Chromium',
 await check('node: headless ESM import, transform, validate, serialize', () => {
   writeFileSync(
     join(vanilla, 'headless.mjs'),
-    `import { createHeadlessEditor, toHTML, toMarkdown, renderToHTML, fromMarkdown } from '@z-packages/zeditor/core';
+    `import { createHeadlessEditor, toHTML, toMarkdown, renderToHTML, fromMarkdown } from '@buffmomo/zeditor/core';
 const e = createHeadlessEditor({ content: fromMarkdown(createHeadlessEditor(), '# Title\\n\\n- [x] done\\n\\n| a | b |\\n|---|---|\\n| 1 | 2 |') });
 e.commands.selectAll();
 e.commands.toggleMark('bold');
@@ -130,7 +130,7 @@ console.log('ok ' + json.blocks.map((b) => b.type).join(','));`,
   return sh('node headless.mjs', vanilla).trim();
 });
 await check('node: SSR-safe import of the DOM entry (no window access at import time)', () => {
-  writeFileSync(join(vanilla, 'ssr.mjs'), `const m = await import('@z-packages/zeditor'); const c = await import('@z-packages/zeditor/code-highlight'); if (typeof m.createEditor !== 'function' || typeof c.codeHighlightExtension !== 'function') throw new Error('exports missing'); console.log('ok');`);
+  writeFileSync(join(vanilla, 'ssr.mjs'), `const m = await import('@buffmomo/zeditor'); const c = await import('@buffmomo/zeditor/code-highlight'); if (typeof m.createEditor !== 'function' || typeof c.codeHighlightExtension !== 'function') throw new Error('exports missing'); console.log('ok');`);
   return sh('node ssr.mjs', vanilla).trim();
 });
 
@@ -139,18 +139,18 @@ const typed = join(work, 'typed');
 mkdirSync(join(typed, 'src'), { recursive: true });
 writeFileSync(
   join(typed, 'package.json'),
-  JSON.stringify({ name: 'consumer-typed', private: true, type: 'module', dependencies: { '@z-packages/zeditor': 'file:' + tarball.replace(/\\/g, '/'), react: '^19.0.0', 'react-dom': '^19.0.0', vue: '^3.5.0', yjs: '^13.6.0', 'y-protocols': '^1.0.6' }, devDependencies: { typescript: '^5.9.0', '@types/react': '^19.0.0', '@types/react-dom': '^19.0.0' } }, null, 2),
+  JSON.stringify({ name: 'consumer-typed', private: true, type: 'module', dependencies: { '@buffmomo/zeditor': 'file:' + tarball.replace(/\\/g, '/'), react: '^19.0.0', 'react-dom': '^19.0.0', vue: '^3.5.0', yjs: '^13.6.0', 'y-protocols': '^1.0.6' }, devDependencies: { typescript: '^5.9.0', '@types/react': '^19.0.0', '@types/react-dom': '^19.0.0' } }, null, 2),
 );
 writeFileSync(join(typed, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2020', module: 'ESNext', moduleResolution: 'Bundler', strict: true, noEmit: true, jsx: 'react-jsx', lib: ['ES2022', 'DOM', 'DOM.Iterable'], skipLibCheck: false }, include: ['src'] }, null, 2));
 writeFileSync(
   join(typed, 'src', 'index.tsx'),
-  `import { createEditor, defineExtension, type Extension, type DocJSON, type EditorState, type NodeRenderer } from '@z-packages/zeditor';
-import { createHeadlessEditor, toHTML, type Editor, type BlockJSON } from '@z-packages/zeditor/core';
-import { ZEditor, useEditorState, type NodeViewProps } from '@z-packages/zeditor/react';
-import { ZEditor as VueEditor, useEditorState as useVueState } from '@z-packages/zeditor/vue';
-import { createCollab, connectSync, memoryHub, Y } from '@z-packages/zeditor/collab';
-import { codeHighlightExtension } from '@z-packages/zeditor/code-highlight';
-import '@z-packages/zeditor/style.css';
+  `import { createEditor, defineExtension, type Extension, type DocJSON, type EditorState, type NodeRenderer } from '@buffmomo/zeditor';
+import { createHeadlessEditor, toHTML, type Editor, type BlockJSON } from '@buffmomo/zeditor/core';
+import { ZEditor, useEditorState, type NodeViewProps } from '@buffmomo/zeditor/react';
+import { ZEditor as VueEditor, useEditorState as useVueState } from '@buffmomo/zeditor/vue';
+import { createCollab, connectSync, memoryHub, Y } from '@buffmomo/zeditor/collab';
+import { codeHighlightExtension } from '@buffmomo/zeditor/code-highlight';
+import '@buffmomo/zeditor/style.css';
 
 const ext: Extension = defineExtension({ name: 'x', commands: { hello: (editor: Editor) => editor.commands.insertText('hi') } });
 const headless = createHeadlessEditor({ extensions: [ext, codeHighlightExtension()] });
@@ -192,9 +192,9 @@ await check('node: SSR-safe import of the React and Vue adapters; React renders 
     join(typed, 'ssr.mjs'),
     `import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { ZEditor } from '@z-packages/zeditor/react';
-import * as vue from '@z-packages/zeditor/vue';
-import * as collab from '@z-packages/zeditor/collab';
+import { ZEditor } from '@buffmomo/zeditor/react';
+import * as vue from '@buffmomo/zeditor/vue';
+import * as collab from '@buffmomo/zeditor/collab';
 const html = renderToString(createElement(ZEditor, { className: 'host' }));
 if (!html.includes('class="host"')) throw new Error('unexpected SSR output: ' + html);
 if (typeof vue.ZEditor !== 'object' || typeof collab.createCollab !== 'function') throw new Error('exports missing');
@@ -211,7 +211,7 @@ if (!skipApps)
       cpSync(join(root, 'examples', app), dir, { recursive: true, filter: (src) => !/[\\/](node_modules|dist)([\\/]|$)/.test(src) });
       cpSync(join(root, 'examples', 'shared'), join(work, 'apps', 'shared'), { recursive: true });
       const pj = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-      pj.dependencies['@z-packages/zeditor'] = 'file:' + tarball.replace(/\\/g, '/');
+      pj.dependencies['@buffmomo/zeditor'] = 'file:' + tarball.replace(/\\/g, '/');
       writeFileSync(join(dir, 'package.json'), JSON.stringify(pj, null, 2));
       sh('npm install', dir);
       if (pj.scripts.typecheck) sh('npm run typecheck', dir);

@@ -42,7 +42,7 @@ Per-capability status, evidence and the list of known gaps: [FEATURE_MATRIX.md](
 ```sh
 pnpm install
 pnpm build
-pnpm --filter @z-packages/zeditor exec playwright install chromium firefox webkit   # once
+pnpm --filter @buffmomo/zeditor exec playwright install chromium firefox webkit   # once
 pnpm check             # build, typecheck, unit, browser (builds examples), pack verify
 pnpm playground        # http://127.0.0.1:4173/
 ```
@@ -75,7 +75,7 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
    Bundle: databases are still part of the base bundle, which grew from 84.9 to 95.7 kB gzipped
    in session 3 (style.css 6.8 → 9.3 kB); splitting them into an optional entry is the fix.
    Templates: template buttons exist; a cross-document template gallery does not.
-5. **Equation rendering** — ship an optional `@z-packages/zeditor/katex` entry that lazy-loads
+5. **Equation rendering** — ship an optional `@buffmomo/zeditor/katex` entry that lazy-loads
    KaTeX and sets `renderMath`, plus a test.
 6. **Table polish** — row height resize, hover "+" buttons to add rows / columns, scroll shadow.
 7. **Smaller gaps**: plain-text-only mode, context menu, text-case transforms, inline images,
@@ -87,7 +87,7 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
 9. **Playground test** — the playground was checked visually (`scripts/shots.mjs`) but has no
    automated test.
 10. **First release (owner actions)** — enable *Settings → Pages → Source: GitHub Actions*; set up
-    npm publishing (`NPM_TOKEN` secret or trusted publishing) and confirm the `@z-packages` scope;
+    npm publishing (`NPM_TOKEN` secret or trusted publishing) and confirm the `@buffmomo` scope;
     then push the tag `v0.1.0` (RELEASING.md). Still open: whether to ship source maps (~70 % of the
     unpacked tarball). `node scripts/shots-site.mjs <dir>` screenshots the website and fails on
     broken links or console errors.
@@ -100,7 +100,7 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
 
 - Shell heredocs are unreliable in this environment (Git Bash on Windows): write files with an
   editor tool, and do multi-line patches from a `.cjs` script file rather than `node -e`.
-- Package name is `@z-packages/zeditor` because `zeditor` is taken on npm.
+- Package name is `@buffmomo/zeditor` because `zeditor` is taken on npm.
 - Moves are `remove` + `insert` steps, so `Block` objects are re-created: never hold a `Block`
   across `tr.move` / `tr.remove` + `tr.insert`; look it up again by id. (Found by the fuzz test.)
 - Text blocks may structurally have children even when their spec does not nest (merged

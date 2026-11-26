@@ -12,12 +12,12 @@ const ts = require('typescript');
 
 const pkg = resolve('packages/zeditor');
 const ENTRIES = [
-  ['@z-packages/zeditor/core', 'src/core.ts', 'Headless core: document model, commands, extensions, serializers, databases, sync. Works in Node.js.'],
-  ['@z-packages/zeditor', 'src/index.ts', 'Browser entry: everything in `/core`, plus `createEditor`, the view and the default UI parts. Only the exports that are not in `/core` are listed here.'],
-  ['@z-packages/zeditor/react', 'src/react.tsx', 'React adapter.'],
-  ['@z-packages/zeditor/vue', 'src/vue.ts', 'Vue 3 adapter.'],
-  ['@z-packages/zeditor/collab', 'src/collab.ts', 'Real-time collaboration (Yjs).'],
-  ['@z-packages/zeditor/code-highlight', 'src/code-highlight.ts', 'Syntax highlighting for code blocks.'],
+  ['@buffmomo/zeditor/core', 'src/core.ts', 'Headless core: document model, commands, extensions, serializers, databases, sync. Works in Node.js.'],
+  ['@buffmomo/zeditor', 'src/index.ts', 'Browser entry: everything in `/core`, plus `createEditor`, the view and the default UI parts. Only the exports that are not in `/core` are listed here.'],
+  ['@buffmomo/zeditor/react', 'src/react.tsx', 'React adapter.'],
+  ['@buffmomo/zeditor/vue', 'src/vue.ts', 'Vue 3 adapter.'],
+  ['@buffmomo/zeditor/collab', 'src/collab.ts', 'Real-time collaboration (Yjs).'],
+  ['@buffmomo/zeditor/code-highlight', 'src/code-highlight.ts', 'Syntax highlighting for code blocks.'],
 ].filter(([, f]) => existsSync(resolve(pkg, f)));
 
 const program = ts.createProgram(
@@ -108,7 +108,7 @@ for (const [spec, file, blurb] of ENTRIES) {
     const sym = exp.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exp) : exp;
     const decl = sym.valueDeclaration ?? sym.declarations?.[0];
     if (!decl) continue;
-    if (spec === '@z-packages/zeditor' && seen.has(name)) continue; // re-exported from core
+    if (spec === '@buffmomo/zeditor' && seen.has(name)) continue; // re-exported from core
     if (!seen.has(name)) seen.set(name, spec);
     const kind = kindOf(decl);
     const where = relative(pkg, decl.getSourceFile().fileName).replace(/\\/g, '/');
@@ -148,6 +148,15 @@ for (const s of sections) {
     }
   }
 }
+
+// re-exported dependencies (e.g. `Y` from yjs) are printed by TypeScript with absolute,
+// machine-specific node_modules paths: reduce them to the package name so the output is the
+// same on every machine (and `--check` passes in CI)
+const PKG_IN_NM = String.raw`node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?((?:@[^/"<]+\/)?[^/"<]+)`;
+out = out
+  .replace(new RegExp(String.raw`"[^"\n]*?` + PKG_IN_NM + String.raw`[^"\n]*"`, 'g'), '"$1"')
+  .replace(new RegExp(String.raw`<sub>[^<\n]*?` + PKG_IN_NM + String.raw`[^<\n]*<\/sub>`, 'g'), '<sub>re-exported from `$1`</sub>')
+  .replace(/#### `(\w+)`\n\n```ts\nconst "([^"]+)": typeof import\("\2"\)/g, '#### `$1`\n\n```ts\nconst $1: typeof import("$2")');
 
 const target = resolve('docs/api-reference.md');
 const check = process.argv.includes('--check');

@@ -10,8 +10,8 @@ or who need to react when blocks change.
   and `applyBlockChanges` applies changes that come from the server.
 - [Recipes](#recipes)
 
-Everything here is in `@z-packages/zeditor/core` (headless, also works in Node.js) and is
-re-exported from `@z-packages/zeditor`.
+Everything here is in `@buffmomo/zeditor/core` (headless, also works in Node.js) and is
+re-exported from `@buffmomo/zeditor`.
 
 ## Block IDs
 
@@ -164,7 +164,7 @@ yourself, for example inside a `transaction` listener.
 ### Pushing local changes: `createBlockSync`
 
 ```js
-import { createBlockSync } from '@z-packages/zeditor';
+import { createBlockSync } from '@buffmomo/zeditor';
 
 const sync = createBlockSync(editor, {
   delay: 800,        // push after 800 ms without edits…
@@ -231,7 +231,7 @@ for example, block sync to the server and autosave to `localStorage` for crash r
 When another user or tab changed the document, apply the server's batch:
 
 ```js
-import { applyBlockChanges } from '@z-packages/zeditor';
+import { applyBlockChanges } from '@buffmomo/zeditor';
 
 socket.on('blocks', (batch) => applyBlockChanges(editor, batch)); // origin 'remote', not undoable
 ```
@@ -275,7 +275,7 @@ editor.on('block:completed', ({ id, block, origin }) => {
 ### A task moved to "Done"
 
 ```js
-import { dbProperties } from '@z-packages/zeditor';
+import { dbProperties } from '@buffmomo/zeditor';
 
 editor.on('block:updated', (e) => {
   if (e.type !== 'db_row' || !e.cells) return;

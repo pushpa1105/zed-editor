@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>zeditor playground</title>
-    <link rel="stylesheet" href="./node_modules/@z-packages/zeditor/dist/style.css" />
+    <link rel="stylesheet" href="./node_modules/@buffmomo/zeditor/dist/style.css" />
     <script type="importmap">
-      { "imports": { "@z-packages/zeditor": "./node_modules/@z-packages/zeditor/dist/zeditor.browser.js" } }
+      { "imports": { "@buffmomo/zeditor": "./node_modules/@buffmomo/zeditor/dist/zeditor.browser.js" } }
     </script>
     <style>
       :root { color-scheme: light dark; }
@@ -77,7 +77,7 @@
     </div>
 
     <script type="module">
-      import * as Z from '@z-packages/zeditor';
+      import * as Z from '@buffmomo/zeditor';
       import { issueRefExtension, calloutExtension, SHARED_DOCUMENT } from '../examples/shared/extensions.js';
 
       const FEATURES = ['lists', 'code', 'tables', 'layout', 'media', 'equation', 'mentions', 'hashtag', 'emoji', 'markdownShortcuts', 'autolink', 'pages', 'comments', 'suggestions', 'database', 'notion'];
@@ -329,7 +329,7 @@
           { id: 'p1', type: 'paragraph', content: [{ text: 'One engine, two interfaces. Switch between ' }, { text: 'Classic', marks: { bold: true } }, { text: ' and ' }, { text: 'Blocks', marks: { bold: true } }, { text: ' in the header: the document, caret and undo history carry over. In Blocks mode type ' }, { text: '/', marks: { code: true } }, { text: ' for commands, ' }, { text: '@', marks: { code: true } }, { text: ' to mention, ' }, { text: '#', marks: { code: true } }, { text: ' for an issue, ' }, { text: ':rocket:', marks: { code: true } }, { text: ' for emoji.' }] },
           { id: 'l1', type: 'list', attrs: { kind: 'check', checked: true }, content: [{ text: 'Rich text, lists, tables, code, media' }] },
           { id: 'l2', type: 'list', attrs: { kind: 'check', checked: false }, content: [{ text: 'Try drag handles, the slash menu and table tools' }], children: [{ id: 'l3', type: 'list', attrs: { kind: 'bullet' }, content: [{ text: 'Nested with Tab / Shift+Tab' }] }] },
-          { id: 'c1', type: 'code', attrs: { language: 'javascript' }, content: [{ text: 'import { createEditor } from "@z-packages/zeditor";\ncreateEditor({ element: "#editor" }); // that is all' }] },
+          { id: 'c1', type: 'code', attrs: { language: 'javascript' }, content: [{ text: 'import { createEditor } from "@buffmomo/zeditor";\ncreateEditor({ element: "#editor" }); // that is all' }] },
           { id: 't1', type: 'table', children: [
             { id: 'r1', type: 'table_row', children: [{ id: 'k1', type: 'table_cell', attrs: { header: true }, children: [{ id: 'k1p', type: 'paragraph', content: [{ text: 'Feature' }] }] }, { id: 'k2', type: 'table_cell', attrs: { header: true }, children: [{ id: 'k2p', type: 'paragraph', content: [{ text: 'Try it' }] }] }] },
             { id: 'r2', type: 'table_row', children: [{ id: 'k3', type: 'table_cell', children: [{ id: 'k3p', type: 'paragraph', content: [{ text: 'Paste from a spreadsheet' }] }] }, { id: 'k4', type: 'table_cell', children: [{ id: 'k4p', type: 'paragraph', content: [{ text: 'Select cells, Tab, merge' }] }] }] },

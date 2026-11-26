@@ -273,7 +273,7 @@ const libFor = (dir) => posix.relative(dir, 'lib/zeditor') + '/';
 const backLink = (dir) => `<a href="${posix.relative(dir, 'index.html')}" style="position:fixed;z-index:9999;right:14px;bottom:14px;font:600 13px/1 system-ui,sans-serif;padding:9px 14px;border-radius:999px;background:#5b4fe0;color:#fff;text-decoration:none;box-shadow:0 6px 20px rgb(0 0 0/25%)">← zeditor docs</a>`;
 function copyPage(src, dest) {
   const dir = posix.dirname(dest);
-  let html = readFileSync(join(root, src), 'utf8').replace(/\.\/node_modules\/@z-packages\/zeditor\//g, './' + libFor(dir));
+  let html = readFileSync(join(root, src), 'utf8').replace(/\.\/node_modules\/@buffmomo\/zeditor\//g, './' + libFor(dir));
   html = html.replace(/<body([^>]*)>/, (m) => `${m}\n${backLink(dir)}`);
   mkdirSync(join(out, dir), { recursive: true });
   writeFileSync(join(out, dest), html);
