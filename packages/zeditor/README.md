@@ -1,8 +1,8 @@
-# @z-packages/zeditor
+# @buffmomo/zeditor
 
-[![npm](https://img.shields.io/npm/v/@z-packages/zeditor)](https://www.npmjs.com/package/@z-packages/zeditor)
+[![npm](https://img.shields.io/npm/v/@buffmomo/zeditor)](https://www.npmjs.com/package/@buffmomo/zeditor)
 [![CI](https://github.com/pushpa1105/zed-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/pushpa1105/zed-editor/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/@z-packages/zeditor)](https://github.com/pushpa1105/zed-editor/blob/main/packages/zeditor/LICENSE)
+[![license](https://img.shields.io/npm/l/@buffmomo/zeditor)](https://github.com/pushpa1105/zed-editor/blob/main/packages/zeditor/LICENSE)
 
 **[Documentation](https://pushpa1105.github.io/zed-editor/)** · **[Playground](https://pushpa1105.github.io/zed-editor/playground/)** · **[Changelog](https://pushpa1105.github.io/zed-editor/docs/changelog.html)**
 
@@ -20,10 +20,10 @@ Zero runtime dependencies in the base bundle. Integrations: **plain HTML/JS**, *
 ### Plain HTML — no framework, no build step
 
 ```html
-<link rel="stylesheet" href="./node_modules/@z-packages/zeditor/dist/style.css" />
+<link rel="stylesheet" href="./node_modules/@buffmomo/zeditor/dist/style.css" />
 <div id="editor"></div>
 <script type="module">
-  import { createEditor } from './node_modules/@z-packages/zeditor/dist/zeditor.browser.js';
+  import { createEditor } from './node_modules/@buffmomo/zeditor/dist/zeditor.browser.js';
 
   const z = createEditor({ element: '#editor', placeholder: 'Write something…' });
   // z.setMode('block');  z.getJSON();  z.setJSON(saved);
@@ -33,8 +33,8 @@ Zero runtime dependencies in the base bundle. Integrations: **plain HTML/JS**, *
 ### React
 
 ```tsx
-import { ZEditor, useEditorState } from '@z-packages/zeditor/react';
-import '@z-packages/zeditor/style.css';
+import { ZEditor, useEditorState } from '@buffmomo/zeditor/react';
+import '@buffmomo/zeditor/style.css';
 
 export function Notes() {
   return <ZEditor mode="block" placeholder="Type / for commands" onChange={(editor) => save(editor.getJSON())} />;
@@ -49,8 +49,8 @@ are live props. Load another document with `ref.current.setJSON(doc)`.
 
 ```vue
 <script setup>
-import { ZEditor } from '@z-packages/zeditor/vue';
-import '@z-packages/zeditor/style.css';
+import { ZEditor } from '@buffmomo/zeditor/vue';
+import '@buffmomo/zeditor/style.css';
 </script>
 
 <template>
@@ -69,7 +69,7 @@ Events: `@ready` (the editor instance, once mounted), `@change` and `@selection`
 | **Headless** | `ui: false` (or `createHeadlessEditor()` with no DOM at all) and render every control yourself from `getState()` / `subscribe()` and `editor.commands` |
 
 ```js
-import { createEditor } from '@z-packages/zeditor';
+import { createEditor } from '@buffmomo/zeditor';
 
 const z = createEditor({
   element: '#editor',
@@ -135,15 +135,15 @@ extension points. See [docs/extensions.md](https://pushpa1105.github.io/zed-edit
 
 | Import | Contents | Needs |
 | --- | --- | --- |
-| `@z-packages/zeditor` | `createEditor`, view, default UI, everything from `/core` | a browser |
-| `@z-packages/zeditor/core` | headless engine, commands, HTML/Markdown/JSON, comments, suggestions, versions, autosave, uploads | nothing (Node, workers, SSR) |
-| `@z-packages/zeditor/react` | `<ZEditor>`, `useEditorState`, `useEditor`, `NodeContent` | `react`, `react-dom` ≥ 18 |
-| `@z-packages/zeditor/vue` | `<ZEditor>`, `useEditorState`, `useEditor`, `NodeContent` | `vue` ≥ 3.3 |
-| `@z-packages/zeditor/collab` | Yjs binding, presence, sync, transports | `yjs`, `y-protocols` |
-| `@z-packages/zeditor/code-highlight` | syntax highlighting for code blocks | — |
-| `@z-packages/zeditor/style.css` | styles (optional with `unstyled`) | — |
-| `@z-packages/zeditor/browser` | single-file ES module for `<script type="module">` | — |
-| `@z-packages/zeditor/collab/browser` | single-file collaboration module (bundles Yjs) | — |
+| `@buffmomo/zeditor` | `createEditor`, view, default UI, everything from `/core` | a browser |
+| `@buffmomo/zeditor/core` | headless engine, commands, HTML/Markdown/JSON, comments, suggestions, versions, autosave, uploads | nothing (Node, workers, SSR) |
+| `@buffmomo/zeditor/react` | `<ZEditor>`, `useEditorState`, `useEditor`, `NodeContent` | `react`, `react-dom` ≥ 18 |
+| `@buffmomo/zeditor/vue` | `<ZEditor>`, `useEditorState`, `useEditor`, `NodeContent` | `vue` ≥ 3.3 |
+| `@buffmomo/zeditor/collab` | Yjs binding, presence, sync, transports | `yjs`, `y-protocols` |
+| `@buffmomo/zeditor/code-highlight` | syntax highlighting for code blocks | — |
+| `@buffmomo/zeditor/style.css` | styles (optional with `unstyled`) | — |
+| `@buffmomo/zeditor/browser` | single-file ES module for `<script type="module">` | — |
+| `@buffmomo/zeditor/collab/browser` | single-file collaboration module (bundles Yjs) | — |
 
 All framework and collaboration packages are *optional* peer dependencies: a vanilla consumer
 installs none of them. The package is ESM, marked side-effect free (except CSS) and split into
@@ -152,7 +152,7 @@ shared chunks, so bundlers tree-shake what you do not import.
 ## Server-side rendering and SEO
 
 ```js
-import { renderToHTML, renderToText } from '@z-packages/zeditor/core';
+import { renderToHTML, renderToText } from '@buffmomo/zeditor/core';
 
 const html = renderToHTML(savedDoc, { ids: true }); // semantic, sanitized HTML: h1–h6, ul/ol, table, figure…
 const description = renderToText(savedDoc).slice(0, 160);

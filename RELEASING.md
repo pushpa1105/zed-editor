@@ -26,10 +26,10 @@ changelog page and the CDN snippets on the landing page all read it.
      `pushpa1105/zed-editor` and workflow `release.yml`. For the very first publish, the
      package must exist first, so use the token method once, or publish `0.1.0` by hand.
    - **Token**: create an npm *granular* or *automation* access token that can publish
-     `@z-packages/zeditor`. Add it in *Settings → Secrets and variables → Actions* as `NPM_TOKEN`.
+     `@buffmomo/zeditor`. Add it in *Settings → Secrets and variables → Actions* as `NPM_TOKEN`.
 3. **Package name**: check the name before the first release. `zeditor` is taken on npm, so the
-   package is `@z-packages/zeditor`, and you must own the `@z-packages` scope (an npm organization
-   or user). To use another scope, search the repository for `@z-packages/zeditor` and replace
+   package is `@buffmomo/zeditor`, and you must own the `@buffmomo` scope (an npm organization
+   or user). To use another scope, search the repository for `@buffmomo/zeditor` and replace
    every occurrence.
 4. If the repository moves or is renamed, update `homepage`, `repository` and `bugs` in
    `packages/zeditor/package.json`, and the compare links at the bottom of `CHANGELOG.md`.
@@ -107,7 +107,7 @@ pnpm release prerelease --preid beta    # 0.1.0 -> 0.1.1-beta.0, then -beta.1, �
 pnpm release minor                      # 0.1.1-beta.1 -> 0.2.0 (finishes the line)
 ```
 
-Users install a pre-release with `npm install @z-packages/zeditor@next`.
+Users install a pre-release with `npm install @buffmomo/zeditor@next`.
 
 ### If something goes wrong
 
@@ -117,7 +117,7 @@ Users install a pre-release with `npm install @z-packages/zeditor@next`.
 - **It failed after publishing**: an npm version cannot be published twice. Leave it, fix forward
   with a patch release, and create the GitHub release by hand if that step did not run
   (`gh release create v0.2.0 --notes "$(pnpm -s release:notes 0.2.0)"`).
-- **A bad version reached users**: `npm deprecate @z-packages/zeditor@0.2.0 "use 0.2.1"`, then
+- **A bad version reached users**: `npm deprecate @buffmomo/zeditor@0.2.0 "use 0.2.1"`, then
   publish the fix. Use `npm unpublish` only within 72 hours, and only when nothing depends on the
   version yet.
 

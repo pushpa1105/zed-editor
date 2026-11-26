@@ -1,6 +1,6 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@z-packages/zeditor/style.css';
+import '@buffmomo/zeditor/style.css';
 import { App } from './App';
 
 // Strict Mode mounts, unmounts and re-mounts every component in development:

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>zeditor — plain HTML example (no framework, no build step)</title>
     <!--
-      No framework, no TypeScript, no bundler. After `npm install @z-packages/zeditor`
+      No framework, no TypeScript, no bundler. After `npm install @buffmomo/zeditor`
       this page works as-is from any static file server.
     -->
-    <link rel="stylesheet" href="./node_modules/@z-packages/zeditor/dist/style.css" />
+    <link rel="stylesheet" href="./node_modules/@buffmomo/zeditor/dist/style.css" />
     <script type="importmap">
-      { "imports": { "@z-packages/zeditor": "./node_modules/@z-packages/zeditor/dist/zeditor.browser.js" } }
+      { "imports": { "@buffmomo/zeditor": "./node_modules/@buffmomo/zeditor/dist/zeditor.browser.js" } }
     </script>
     <style>
       body { font-family: system-ui, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
@@ -39,7 +39,7 @@
     </main>
 
     <script type="module">
-      import { createEditor, codeHighlightExtension } from '@z-packages/zeditor';
+      import { createEditor, codeHighlightExtension } from '@buffmomo/zeditor';
       import { issueRefExtension, calloutExtension } from '../shared/extensions.js';
 
       const KEY = 'zeditor-html-example';

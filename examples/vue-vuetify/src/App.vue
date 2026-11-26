@@ -1,6 +1,6 @@
 <script setup>
 import { computed, markRaw, ref, shallowRef } from 'vue';
-import { ZEditor, useEditorState } from '@z-packages/zeditor/vue';
+import { ZEditor, useEditorState } from '@buffmomo/zeditor/vue';
 import { mdiFormatBold, mdiFormatItalic, mdiFormatUnderline, mdiCodeTags, mdiUndo, mdiRedo, mdiFormatListBulleted, mdiFormatListNumbered, mdiFormatListChecks, mdiTable, mdiAlertBoxOutline, mdiLink } from '@mdi/js';
 import { issueRefExtension, calloutExtension, SHARED_DOCUMENT } from '../../shared/extensions.js';
 import NoticeView from './NoticeView.vue';

@@ -14,7 +14,7 @@ importers:
 
   examples/react:
     dependencies:
-      '@z-packages/zeditor':
+      '@buffmomo/zeditor':
         specifier: workspace:*
         version: link:../../packages/zeditor
       react:
@@ -42,12 +42,12 @@ importers:
 
   examples/vue-vuetify:
     dependencies:
+      '@buffmomo/zeditor':
+        specifier: workspace:*
+        version: link:../../packages/zeditor
       '@mdi/js':
         specifier: ^7.4.47
         version: 7.4.47
-      '@z-packages/zeditor':
-        specifier: workspace:*
-        version: link:../../packages/zeditor
       vue:
         specifier: ^3.5.0
         version: 3.5.46(typescript@5.9.3)

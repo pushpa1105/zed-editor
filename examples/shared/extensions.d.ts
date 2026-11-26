@@ -1,4 +1,4 @@
-import type { Extension, DocJSON } from '@z-packages/zeditor';
+import type { Extension, DocJSON } from '@buffmomo/zeditor';
 
 export interface Issue {
   key: string;

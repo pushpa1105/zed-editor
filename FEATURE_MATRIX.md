@@ -61,7 +61,7 @@ Evidence abbreviations: **U** = `packages/zeditor/test/unit/…`, **B** = `packa
 | Editable / read-only | `setEditable` | `setReadOnly` | ✅ | B editing "read-only…" |
 | JSON serialization, versioned | `exportJSON` / `importJSON` | `getJSON` / `setJSON`, format version + migrations, validation | ✅ | U serialization "JSON" |
 | Themes (class names) | theme object maps to classes | CSS variables + `z-*` classes, `unstyled`, per-editor theme | ✅ (different mechanism) | B platform; PG |
-| `@lexical/headless` | editor without DOM in Node | `@z-packages/zeditor/core` | ✅ | all U tests; PV "node: headless…" |
+| `@lexical/headless` | editor without DOM in Node | `@buffmomo/zeditor/core` | ✅ | all U tests; PV "node: headless…" |
 | `@lexical/history` | undo/redo with merge heuristics | built-in history with grouping; per-user history in collab | ✅ | U editing; U collab "undo only reverts…" |
 | `@lexical/extension` (extension API) | declarative extensions with dependencies | `Extension`: requires, priority, conflicts, cleanup, apiVersion | ✅ | U features "extensions" |
 | `@lexical/selection` | selection helpers, style patching | `selectedRanges`, `selectedBlocks`, `markRangeAt`, mark commands | ✅ | U editing |
@@ -82,7 +82,7 @@ Evidence abbreviations: **U** = `packages/zeditor/test/unit/…`, **B** = `packa
 | `@lexical/code`, `code-core`, `code-prism`, `code-shiki` | code blocks with Prism or Shiki | `code` block + optional built-in tokenizer; custom tokenizers pluggable. No Prism/Shiki adapter shipped | 🟡 | B rich "code block…" |
 | `@lexical/hashtag` | hashtag entities | `hashtag` mark, kept in sync while typing | ✅ | U features |
 | `@lexical/file` | export/import editor state as a file | `getJSON` / `setJSON`; no file-download helper | 🟡 | — |
-| `@lexical/yjs` | collaboration binding | `@z-packages/zeditor/collab` | ✅ | U collab; B collab |
+| `@lexical/yjs` | collaboration binding | `@buffmomo/zeditor/collab` | ✅ | U collab; B collab |
 | `@lexical/dragon` | Dragon NaturallySpeaking support | — | ❌ | — |
 | `@lexical/a11y` | **unverified** | accessible default controls (see §6) | 🟡 unverified reference | B platform "accessibility…" |
 | `@lexical/devtools`, `devtools-core` | browser devtools extension | playground document inspector (JSON, HTML, Markdown, state, steps) | 🟡 no browser extension | PG |

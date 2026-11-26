@@ -1,70 +1,70 @@
 {
-  "date": "2026-11-24T19:13:08.410Z",
-  "tarball": "z-packages-zeditor-0.1.0.tgz",
+  "date": "2026-11-26T19:23:06.220Z",
+  "tarball": "buffmomo-zeditor-0.1.0.tgz",
   "checks": [
     {
       "name": "tarball contents",
       "ok": true,
       "ms": 0,
-      "detail": "61 files"
+      "detail": "63 files"
     },
     {
       "name": "vanilla: install only the tarball",
       "ok": true,
-      "ms": 4844,
-      "detail": "node_modules: @z-packages"
+      "ms": 3125,
+      "detail": "node_modules: @buffmomo"
     },
     {
       "name": "vanilla: no-build HTML example runs from node_modules in Chromium",
       "ok": true,
-      "ms": 926,
+      "ms": 1022,
       "detail": "mounted, typed, switched mode, saved and reloaded JSON, CSS applied, no console errors"
     },
     {
       "name": "node: headless ESM import, transform, validate, serialize",
       "ok": true,
-      "ms": 122,
+      "ms": 132,
       "detail": "ok heading,list,table"
     },
     {
       "name": "node: SSR-safe import of the DOM entry (no window access at import time)",
       "ok": true,
-      "ms": 128,
+      "ms": 124,
       "detail": "ok"
     },
     {
       "name": "types: install tarball with peers",
       "ok": true,
-      "ms": 9608,
+      "ms": 11603,
       "detail": "installed"
     },
     {
       "name": "types: a strict TypeScript project type-checks every public entry point",
       "ok": true,
-      "ms": 3392,
+      "ms": 3957,
       "detail": "tsc --strict passed (skipLibCheck off)"
     },
     {
       "name": "node: SSR-safe import of the React and Vue adapters; React renders on the server",
       "ok": true,
-      "ms": 266,
+      "ms": 285,
       "detail": "ok <div class=\"host\"></div>"
     },
     {
       "name": "react: example builds against the tarball",
       "ok": true,
-      "ms": 21378,
-      "detail": "built: index-CobcXd0S.js, index-DArYjbc6.css"
+      "ms": 25328,
+      "detail": "built: index-Bd8k2H7S.css, index-C54mrP-I.js"
     },
     {
       "name": "vue-vuetify: example builds against the tarball",
       "ok": true,
-      "ms": 27834,
-      "detail": "built: index-barvAAny.js, index-EdeO6NJ9.css"
+      "ms": 35213,
+      "detail": "built: index-BPgvalCT.js, index-CbMY3rZC.css"
     }
   ],
-  "files": 61,
-  "unpackedKB": 4268,
-  "packedKB": 1090,
+  "files": 63,
+  "unpackedKB": 4510,
+  "packedKB": 1156,
   "ok": true
 }

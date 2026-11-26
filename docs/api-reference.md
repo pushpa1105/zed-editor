@@ -9,14 +9,14 @@ hand._ Guides explain how these fit together: [user guide](user-guide.md),
 Each entry shows the signature, the source file, and the doc comment where there is one. Types and
 interfaces list their members.
 
-- [`@z-packages/zeditor/core`](#zpackageszeditorcore) — 288 exports
-- [`@z-packages/zeditor`](#zpackageszeditor) — 44 exports
-- [`@z-packages/zeditor/react`](#zpackageszeditorreact) — 9 exports
-- [`@z-packages/zeditor/vue`](#zpackageszeditorvue) — 6 exports
-- [`@z-packages/zeditor/collab`](#zpackageszeditorcollab) — 19 exports
-- [`@z-packages/zeditor/code-highlight`](#zpackageszeditorcodehighlight) — 6 exports
+- [`@buffmomo/zeditor/core`](#buffmomozeditorcore) — 288 exports
+- [`@buffmomo/zeditor`](#buffmomozeditor) — 44 exports
+- [`@buffmomo/zeditor/react`](#buffmomozeditorreact) — 9 exports
+- [`@buffmomo/zeditor/vue`](#buffmomozeditorvue) — 6 exports
+- [`@buffmomo/zeditor/collab`](#buffmomozeditorcollab) — 19 exports
+- [`@buffmomo/zeditor/code-highlight`](#buffmomozeditorcodehighlight) — 6 exports
 
-## `@z-packages/zeditor/core`
+## `@buffmomo/zeditor/core`
 
 Headless core: document model, commands, extensions, serializers, databases, sync. Works in Node.js.
 
@@ -3510,7 +3510,7 @@ Host upload function. Must honour `signal`; report progress as a 0..1 fraction.
 
 <sub>src/features/persist.ts</sub>
 
-## `@z-packages/zeditor`
+## `@buffmomo/zeditor`
 
 Browser entry: everything in `/core`, plus `createEditor`, the view and the default UI parts. Only the exports that are not in `/core` are listed here.
 
@@ -4059,7 +4059,7 @@ type NodeRenderer = (block: Block, ctx: RenderContext) => NodeViewHandle;
 
 <sub>src/view/render.ts</sub>
 
-## `@z-packages/zeditor/react`
+## `@buffmomo/zeditor/react`
 
 React adapter.
 
@@ -4237,7 +4237,7 @@ interface ZEditorProps
 | `ariaLabel?: string \| undefined` |  |
 | `pageView?: "tabs" \| "paged" \| undefined` | 'tabs' shows one page at a time, 'paged' shows all pages as sheets |
 
-## `@z-packages/zeditor/vue`
+## `@buffmomo/zeditor/vue`
 
 Vue 3 adapter.
 
@@ -4335,7 +4335,7 @@ interface ZEditor
 | `focus(): void` |  |
 | `destroy(): void` |  |
 
-## `@z-packages/zeditor/collab`
+## `@buffmomo/zeditor/collab`
 
 Real-time collaboration (Yjs).
 
@@ -4439,7 +4439,7 @@ class Awareness
 
 The Awareness class implements a simple shared state protocol that can be used for non-persistent data like awareness information (cursor, username, status, ..). Each client can update its own local state and listen to state changes of remote clients. Every client may set a state of a remote peer to `null` to mark the client as offline. Each client is identified by a unique client id (something we borrow from `doc.clientID`). A client can override its own state by propagating a message with an increasing timestamp (`clock`). If such a message is received, it is applied if the known state of that client is older than the new state (`clock < newClock`). If a client thinks that a remote client is offline, it may propagate a message with `{ clock: currentClientClock, state: null, client: remoteClient }`. If such a message is received, and the known clock of that client equals the received clock, it will override the state with `null`. Before a client disconnects, it should propagate a `null` state with an updated clock. Awareness states must be updated every 30 seconds. Otherwise the Awareness instance will delete the client state.
 
-<sub>../../node_modules/.pnpm/y-protocols@1.0.7_yjs@13.6.33/node_modules/y-protocols/awareness.d.ts</sub>
+<sub>re-exported from `y-protocols`</sub>
 
 | Member | Description |
 | --- | --- |
@@ -4464,10 +4464,10 @@ The Awareness class implements a simple shared state protocol that can be used f
 #### `Y`
 
 ```ts
-const "C:/oi/z-packages/zeditor/node_modules/.pnpm/yjs@13.6.33/node_modules/yjs/dist/src/index": typeof import("C:/oi/z-packages/zeditor/node_modules/.pnpm/yjs@13.6.33/node_modules/yjs/dist/src/index")
+const Y: typeof import("yjs")
 ```
 
-<sub>../../node_modules/.pnpm/yjs@13.6.33/node_modules/yjs/dist/src/index.d.ts</sub>
+<sub>re-exported from `yjs`</sub>
 
 ### Interfaces
 
@@ -4599,7 +4599,7 @@ Host transport adapter: an unreliable-until-open, ordered, binary message channe
 | `connect(): void` |  |
 | `disconnect(): void` |  |
 
-## `@z-packages/zeditor/code-highlight`
+## `@buffmomo/zeditor/code-highlight`
 
 Syntax highlighting for code blocks.
 

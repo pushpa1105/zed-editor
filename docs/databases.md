@@ -84,7 +84,7 @@ Calculations: `count`, `filled`, `empty`, `unique`, `sum`, `avg`, `min`, `max`, 
 Everything the UI does is a command, so a custom interface (or a script in Node) can do the same:
 
 ```js
-import { createHeadlessEditor, createDatabase, queryDatabase } from '@z-packages/zeditor/core';
+import { createHeadlessEditor, createDatabase, queryDatabase } from '@buffmomo/zeditor/core';
 
 const editor = createHeadlessEditor();
 editor.commands.insertDatabase('table', {
@@ -137,7 +137,7 @@ dateDiff(prop("Due"), today())            // whole days until due
 - Limits: 500 tokens, 60 levels of nesting. `today()` is evaluated when the view renders.
 
 ```js
-import { runFormula, checkFormula } from '@z-packages/zeditor/core';
+import { runFormula, checkFormula } from '@buffmomo/zeditor/core';
 editor.commands.dbAddProperty(db.id, { name: 'Effort', type: 'formula', formula: 'prop("Points") * 2' });
 checkFormula('prop("Points") *');          // → error message, or null when it parses
 runFormula('1 + 2', () => null);           // → 3
@@ -158,7 +158,7 @@ runFormula('1 + 2', () => null);           // → 3
 ### Custom property types
 
 ```js
-import { registerDbPropertyType } from '@z-packages/zeditor/core';
+import { registerDbPropertyType } from '@buffmomo/zeditor/core';
 
 registerDbPropertyType({
   type: 'rating',                                   // lower-case identifier
@@ -273,7 +273,7 @@ Pages of a multi-page document can be nested: a page stores its parent in `attrs
 `setPageParent(id, parentId | null)` moves one (it refuses to create a cycle), and removing a
 page moves its sub-pages up to its own parent. The page tabs indent sub-pages, their context menu
 has "Add sub-page" and "Move to top level", and a breadcrumb trail under the tabs shows the path
-of the active page. Helpers: `parentPage`, `pagePath`, `pageTree` from `@z-packages/zeditor/core`.
+of the active page. Helpers: `parentPage`, `pagePath`, `pageTree` from `@buffmomo/zeditor/core`.
 Pages remain top-level blocks in document order; nesting is a relationship, not containment, so a
 document written with sub-pages opens as a flat list of pages in a client that ignores `parent`.
 

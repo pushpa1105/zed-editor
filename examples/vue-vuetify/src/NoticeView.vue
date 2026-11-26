@@ -2,7 +2,7 @@
 // Host rendering for the shared `notice` block: a Vuetify alert instead of the default DOM.
 // The block's child blocks stay fully editable inside <NodeContent>.
 import { computed } from 'vue';
-import { NodeContent } from '@z-packages/zeditor/vue';
+import { NodeContent } from '@buffmomo/zeditor/vue';
 
 const props = defineProps({
   editor: { type: Object, required: true },

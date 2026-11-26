@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/pushpa1105/zed-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/pushpa1105/zed-editor/actions/workflows/ci.yml)
 [![Docs site](https://github.com/pushpa1105/zed-editor/actions/workflows/pages.yml/badge.svg)](https://pushpa1105.github.io/zed-editor/)
-[![npm](https://img.shields.io/npm/v/@z-packages/zeditor)](https://www.npmjs.com/package/@z-packages/zeditor)
+[![npm](https://img.shields.io/npm/v/@buffmomo/zeditor)](https://www.npmjs.com/package/@buffmomo/zeditor)
 
 **[Documentation website](https://pushpa1105.github.io/zed-editor/)** · [Playground](https://pushpa1105.github.io/zed-editor/playground/) · [Changelog](CHANGELOG.md) · [Releasing](RELEASING.md) · [Contributing](CONTRIBUTING.md)
 
@@ -10,7 +10,7 @@ An extensible, open-source rich-text and block editor written from scratch in Ty
 One engine, two interfaces — **Classic** (toolbar, continuous document) and **Blocks**
 (slash commands, handles, nesting, drag-to-reorder) — for **plain HTML/JS**, **React** and **Vue 3**.
 
-- Package: [`packages/zeditor`](packages/zeditor) → `@z-packages/zeditor` ([README with quick starts](packages/zeditor/README.md))
+- Package: [`packages/zeditor`](packages/zeditor) → `@buffmomo/zeditor` ([README with quick starts](packages/zeditor/README.md))
 - [User guide](docs/user-guide.md) · [Commands and Editor API](docs/commands.md) · [Block IDs, events and backend sync](docs/events-and-sync.md) · [API reference](docs/api-reference.md)
 - [Feature matrix vs. Lexical 0.53.0](FEATURE_MATRIX.md) · [Architecture](docs/architecture.md) · [Progress / resume notes](PROGRESS.md)
 
@@ -38,7 +38,7 @@ pnpm playground        # http://127.0.0.1:4173/
 | `pnpm build:examples` | build the React and Vue example apps |
 | `pnpm typecheck` | type-check the package and the React example |
 | `pnpm test` | unit, randomized and collaboration tests (Vitest, Node) |
-| `pnpm test:browser` | Playwright tests in Chromium, Firefox and WebKit (`pnpm --filter @z-packages/zeditor exec playwright install` once) |
+| `pnpm test:browser` | Playwright tests in Chromium, Firefox and WebKit (`pnpm --filter @buffmomo/zeditor exec playwright install` once) |
 | `pnpm bench` | benchmarks → `docs/benchmarks.md` |
 | `pnpm docs:api` | regenerate `docs/api-reference.md` from the sources |
 | `pnpm docs:check` | fail if anything public (exports, commands, events, toolbar items, options) is undocumented or the API reference is stale |
@@ -73,7 +73,7 @@ website/                 documentation website assets (CSS, JS); built by script
   (`.github/workflows/release.yml`).
 - Versioning policy, one-time npm setup and recovery steps: [RELEASING.md](RELEASING.md).
 
-The unscoped name `zeditor` is taken on npm, so the package is `@z-packages/zeditor`.
+The unscoped name `zeditor` is taken on npm, so the package is `@buffmomo/zeditor`.
 
 ## License
 

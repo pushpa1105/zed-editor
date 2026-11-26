@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <title>zeditor test harness</title>
-    <link rel="stylesheet" href="/node_modules/@z-packages/zeditor/dist/style.css" />
+    <link rel="stylesheet" href="/node_modules/@buffmomo/zeditor/dist/style.css" />
     <script type="importmap">
-      { "imports": { "@z-packages/zeditor": "/node_modules/@z-packages/zeditor/dist/zeditor.browser.js" } }
+      { "imports": { "@buffmomo/zeditor": "/node_modules/@buffmomo/zeditor/dist/zeditor.browser.js" } }
     </script>
     <style>
       body { margin: 0; padding: 40px 80px; font-family: system-ui, sans-serif; }
@@ -17,7 +17,7 @@
     <div id="b"></div>
     <div id="side"></div>
     <script type="module">
-      import * as Z from '@z-packages/zeditor';
+      import * as Z from '@buffmomo/zeditor';
       import { issueRefExtension, calloutExtension, SHARED_DOCUMENT } from '/examples/shared/extensions.js';
       window.Z = Z;
       window.shared = { issueRefExtension, calloutExtension, SHARED_DOCUMENT };

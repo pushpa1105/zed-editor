@@ -46,7 +46,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm --filter @z-packages/zeditor exec playwright install --with-deps chromium firefox webkit
+      - run: pnpm --filter @buffmomo/zeditor exec playwright install --with-deps chromium firefox webkit
       - run: pnpm test:browser
       - if: failure()
         uses: actions/upload-artifact@v4
