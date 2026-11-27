@@ -13,9 +13,70 @@ the public API or the stored JSON format.
 
 ### Added
 
+- Block mode: an empty to-do, list item, heading or quote that holds the caret shows a hint
+  ("To-do", "List", "Heading", "Quote"), as empty paragraphs already did. The texts are the
+  labels `placeholder.todo`, `placeholder.list`, `placeholder.heading`, `placeholder.quote`.
+- `diffInline(old, next)` (and the `InlineChange` type): the smallest single change that turns
+  one block's inline content into another; a change of marks only is reported as formatting.
+- `mapSelection(..., foreign)` and the transaction meta `foreign`: mark steps the user did not
+  make (another author, a server update), so text inserted exactly at the caret lands after it.
+  `origin: 'remote'` implies it.
+- Labels `fontSize.default` ("Size") and `fontFamily.default` ("Font").
+
 ### Changed
 
+- **Collaboration: new layout of the shared Yjs document.** The text of all blocks now lives
+  in one `Y.Text` (`doc.getText('flow')`) with a start and an end marker per block, instead
+  of one `Y.Text` inside each block's map. Documents written by 0.1.0 are read and converted
+  when an editor binds to them, and `sharedBlocks` reads both layouts. *Migration:* update
+  every client and server of a document together; a 0.1.0 client cannot read the new layout.
+  Code that read `blockMap.get('text')` directly should call `sharedBlocks(doc, editor)`.
+- Collaboration: two users moving the same block at the same time now leave **one** block
+  (the entry created first; every client deletes the other). Before, both survived and one
+  was renamed `id-<client>-<clock>`.
+- Comment marks keep their thread ids sorted.
+- The placeholder of an empty document takes the text style of its block (heading size in an
+  empty heading, italic in a quote) and is read from the CSS variable `--z-placeholder` on the
+  editing area. The `data-placeholder` attribute is still set; a custom stylesheet that drew it
+  with `.z-editable.z-empty::before` should target `.z-empty .z-content[data-empty]::before`.
+- The block menu (grip button) is more compact: plain icons, tighter rows.
+- Toolbar: the font size and font family dropdowns read "Size" and "Font" while nothing is
+  set, instead of both reading "Default".
+
 ### Fixed
+
+- The placeholder of an empty document no longer sits on top of the checkbox, bullet, number
+  or quote bar when the only block is a list item or a quote: it is drawn inside the empty
+  block instead of at the corner of the editing area.
+- The "+" button next to a block no longer leaves a "/" behind: when its menu is dismissed
+  with Escape or by moving the caret away before anything is typed, the slash is removed.
+- **Collaboration: Enter, Backspace-at-start and moving a block no longer copy text.** Two
+  people splitting or joining the same paragraph at once do not duplicate its text; text
+  typed after the split point follows the tail into the new paragraph, together with the
+  caret; text typed in a paragraph that someone else joins to the previous one, or moves, is
+  kept instead of being lost.
+- Collaboration: two comment threads anchored to overlapping text at the same moment both
+  keep their whole range (one thread no longer cuts the other's anchor on the overlap).
+- Collaboration: a block whose type was left unset by two users' interleaved undos no longer
+  stays an "unknown" block on the clients that received it in that state.
+- **Collaboration: two people typing at the same caret position no longer interleave their
+  characters.** A character arriving from another user exactly at your caret now lands after
+  the caret instead of pushing it forward, so each person's text stays in one piece.
+- Collaboration: text another user types at the edge of your selection no longer becomes part
+  of the selection.
+- Collaboration: formatting you switched on for the next character (for example Ctrl+B with
+  nothing selected) is no longer dropped when someone else's edit arrives first.
+- Collaboration: formatting, links and comment anchors are sent as formatting of the existing
+  characters instead of deleting and re-inserting them. Two people making the same text bold
+  at once no longer duplicate it, and text someone types inside a word while you format it
+  stays where it was typed.
+- Collaboration: other users' carets and selections are shown at the right place immediately
+  after you type before them (they are published as Yjs relative positions; the plain offsets
+  are still sent for older clients).
+- Collaboration: undo and redo put the caret where the restored text now is, even after other
+  people typed earlier in the same block; redo places it after the redone text.
+- `applyBlockChanges`: a text update from the server changes only the part of the block that
+  differs, so your caret keeps its place instead of jumping to the end of the block.
 
 ## [0.1.0] - 2026-11-27
 

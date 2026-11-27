@@ -279,12 +279,31 @@
   position: absolute;
   pointer-events: none;
 }
-.z-theme .z-editable.z-empty::before {
-  content: attr(data-placeholder);
+/* an empty list item, heading or quote that holds the caret says what it is */
+.z-theme[data-mode='block'] .z-editable:not(.z-empty).z-focused .z-caret-block:is(.z-list, .z-heading, .z-quote) > .z-content[data-empty]::before {
+  color: var(--z-muted);
+  opacity: 0.7;
+  position: absolute;
+  pointer-events: none;
+}
+.z-theme[data-mode='block'] .z-editable:not(.z-empty).z-focused .z-caret-block.z-list > .z-content[data-empty]::before {
+  content: var(--z-ph-list, '');
+}
+.z-theme[data-mode='block'] .z-editable:not(.z-empty).z-focused .z-caret-block.z-list[data-kind='check'] > .z-content[data-empty]::before {
+  content: var(--z-ph-todo, '');
+}
+.z-theme[data-mode='block'] .z-editable:not(.z-empty).z-focused .z-caret-block.z-heading > .z-content[data-empty]::before {
+  content: var(--z-ph-heading, '');
+}
+.z-theme[data-mode='block'] .z-editable:not(.z-empty).z-focused .z-caret-block.z-quote > .z-content[data-empty]::before {
+  content: var(--z-ph-quote, '');
+}
+/* drawn inside the block's text, so it starts after a checkbox, bullet or quote bar */
+.z-theme .z-editable.z-empty .z-content[data-empty]::before {
+  content: var(--z-placeholder, '');
   color: var(--z-muted);
   position: absolute;
   pointer-events: none;
-  padding: 2px 0;
 }
 .z-theme .z-root ::selection {
   background: var(--z-selection);
@@ -1006,6 +1025,24 @@
   border-radius: 6px;
   background: var(--z-bg);
   flex: none;
+}
+/* the block menu is a list of short actions: plain icons, tighter rows */
+.z-theme .z-block-menu {
+  max-height: min(420px, 70vh);
+}
+.z-theme .z-block-menu .z-menu-item {
+  padding: 5px 8px;
+}
+.z-theme .z-block-menu .z-menu-icon {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: none;
+  color: var(--z-muted);
+}
+.z-theme .z-block-menu .z-menu-icon svg {
+  width: 16px;
+  height: 16px;
 }
 .z-theme .z-menu-text {
   display: flex;

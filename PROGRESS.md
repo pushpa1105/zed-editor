@@ -24,16 +24,18 @@ failing. npm publication has **not** been done (owner action).
 | Session 4, on request: complex and nested tables — HTML import keeps tables inside cells (4 levels), captions, column widths, colours, alignment; unwraps layout tables; Markdown writes complex tables as HTML; table tools mark the active nested table; playground "Complex tables" example | done |
 | Session 4, on request: documentation of every feature — docs/commands.md (all commands, editor options, Editor API, UI events), generated docs/api-reference.md (every export), `pnpm docs:check` in `pnpm check`; `locale` option now formats dates | done |
 | Session 5, on request: release preparation — CHANGELOG.md (0.1.0), RELEASING.md, CONTRIBUTING.md, `pnpm release` / `release:notes` scripts, documentation website (`pnpm site`, live demo, search, all docs, playground and examples) deployed to GitHub Pages, CI / Pages / Release GitHub Actions workflows, issue and PR templates, Dependabot, npm metadata | done — see RELEASING.md |
+| Collaboration fixes (2026-11-27): same-caret typing no longer interleaves, selections do not grow at their edges, pending formatting survives remote edits, formatting / comment anchors sent as Yjs formatting (no duplicated text), remote carets and undo selections as relative positions, `applyBlockChanges` keeps the caret | done — tests in `test/unit/collab-caret.test.ts`, CHANGELOG "Unreleased" |
+| Collaboration rework (2026-11-27): shared text moved into one flow (`doc.getText('flow')`, start / end marker per block) so split, join and move never copy text; one formatting attribute per comment thread; duplicate block entries after concurrent moves are deleted instead of renamed; 0.1.0 documents are converted on bind | done — docs/collaboration.md "The shared document", tests in `test/unit/collab-structure.test.ts` |
 
 Per-capability status, evidence and the list of known gaps: [FEATURE_MATRIX.md](FEATURE_MATRIX.md).
 
-## Last verified results (this machine, 2026-11-25)
+## Last verified results (this machine, 2026-11-27)
 
 | Check | Command | Result |
 | --- | --- | --- |
 | Type check | `pnpm typecheck` | clean |
-| Unit + randomized + collaboration | `pnpm test` | 103 passed |
-| Browser | `pnpm test:browser` | 203 passed, 4 skipped, 0 failed (69 tests × Chromium, Firefox, WebKit; skips are the CDP IME test and the OS-clipboard test outside Chromium) |
+| Unit + randomized + collaboration | `pnpm test` | 166 passed |
+| Browser | `pnpm test:browser` | 269 passed, 4 skipped, 0 failed (91 tests × Chromium, Firefox, WebKit; skips are the CDP IME test and the OS-clipboard test outside Chromium) |
 | Packed release | `pnpm pack:verify` | 10 / 10 checks passed (`docs/pack-verify.json`) |
 | Benchmarks | `pnpm bench` | `docs/benchmarks.md` |
 
@@ -97,6 +99,33 @@ These are gaps, not regressions. All are listed in FEATURE_MATRIX.md §6.
 - After changing anything public, run `pnpm docs:api` (regenerates docs/api-reference.md) and
   `pnpm docs:check` (fails on undocumented commands, events, toolbar items, options or a stale
   reference). New commands need a line in docs/commands.md.
+
+- Selection mapping has a side: for changes the user did not make (origin `'remote'`, or
+  `tr.setMeta('foreign', true)`) text inserted exactly at the caret goes after it
+  (`mapSelection(..., foreign)`). Anything new that applies other people's edits must use one
+  of the two, or same-position typing interleaves again.
+- `collab.ts` `applyLocal` needs the inverse steps: it diffs the replaced text against the
+  new text (`diffInline`) and sends a formatting-only change as `Y.Text.format`. Never send a
+  mark change as delete + insert.
+- `collab.ts`, shared layout: the text of all blocks is one Y.Text (the flow) with a start and
+  an end marker per block; the binding keeps a mirror of it (`segs`: id, length, closed, stray
+  units). `applyLocal` recognises the editor's step patterns and writes what they mean:
+  "cut the tail + insert a block with it" becomes two markers (split), "append + remove the
+  block" becomes a deletion of the markers in between (join), "remove + insert of the same id"
+  leaves the text where it is (move). A new command that moves text between blocks in another
+  way falls back to delete + insert, which is correct but duplicates under concurrency: give
+  it one of these shapes, or teach `applyLocal` the new one.
+- `collab.ts`: never write to the Y.Doc from inside its observers. Yjs packs the insertions
+  of such a nested transaction into the pending update of the outer one and sends its
+  deletions later, so peers briefly see a moved block twice. Remote changes are collected in
+  the observers and handled on `afterAllTransactions`.
+- `collab._verify()` (internal, used by the tests) reports a mirror or an editor that is out
+  of step with the shared document. To hunt a collaboration bug, run the randomized test with
+  more seeds and call it after every step; client ids are random, so a seed is not a fixed
+  scenario — run a few hundred.
+- Still open in collaboration: type, attributes and the child list of a block are re-created
+  by a move, so a concurrent change of those to a block someone else moves is lost (the text
+  is kept); cells of one database row and the database schema are last-writer-wins.
 
 - Shell heredocs are unreliable in this environment (Git Bash on Windows): write files with an
   editor tool, and do multi-line patches from a `.cjs` script file rather than `node -e`.

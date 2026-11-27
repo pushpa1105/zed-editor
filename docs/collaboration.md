@@ -70,15 +70,49 @@ new WebSocketServer({ port: 1234 }).on('connection', (ws, req) => {
 (This relay is documented but not exercised by the automated tests; the protocol itself is
 tested through the in-memory hub.)
 
+## The shared document
+
+```
+doc.getArray('blocks')   the block tree: one Y.Map per block { id, type, attrs, children: Y.Array }
+doc.getText('flow')      the text of every block, in one sequence:
+                         {s: "a"} hello world {e: 1}  {s: "b"} second paragraph {e: 1}  …
+```
+
+A block's text is what follows its start marker `{s: id}` in the flow, up to the next marker.
+Marks are formatting attributes, inline atoms are embedded objects. The text is one sequence,
+rather than one text per block, so that Enter and Backspace-at-start are an insertion and a
+deletion of *markers* instead of "delete the text here, insert a copy there": that is what
+makes splitting, joining and moving safe when two people do it at once (table below).
+`sharedBlocks(doc, editor)` turns both parts back into block JSON, on a server too.
+
+Rules for states only concurrency can produce, applied identically by every client: if two
+start markers carry the same id the first one is the block's text; text that follows an end
+marker, or a start marker whose block no longer exists, is not shown; a text block without a
+start marker is empty and gets one when somebody types in it.
+
+Documents written by 0.1.0 (one `Y.Text` per block, under the block's `text` key) are read
+as they are and converted when an editor binds to them. All clients of a document must run a
+version that knows the flow; do not mix them with 0.1.0 clients on the same document.
+
 ## Concurrency semantics
 
 | Situation | Result |
 | --- | --- |
 | Concurrent typing in the same paragraph | merged character-wise (Yjs text CRDT) |
-| Concurrent formatting | per-mark last-writer-wins on overlapping ranges |
+| Two users typing at the **same caret position** | two separate runs, never interleaved: a character arriving from someone else exactly at your caret lands *after* the caret. Which run comes first is decided by Yjs (client id) and is the same on every client. |
+| Someone types at the edge of your selection | the selection does not grow to include it |
+| Concurrent formatting | sent as formatting of the existing characters, per-mark last-writer-wins on overlapping ranges; the text itself is never re-inserted, so text typed inside a range while another user formats it stays in place |
+| Two comments anchored to overlapping text at the same moment | both threads keep their whole range (each thread is its own formatting attribute, so neither overwrites the other) |
+| Two users press **Enter** in the same paragraph | the text is never copied, so nothing is duplicated. At the same place: two new paragraphs, one of them empty. At different places: three paragraphs in reading order. |
+| Someone presses Enter while you type after the split point | your text, and your caret, go with the tail into the new paragraph |
+| Two users **join** the same two paragraphs (Backspace at the start, Delete at the end) | joined once; the text is not duplicated |
+| Someone joins the paragraph you are typing in to the previous one | your text is kept, in the joined paragraph, and your caret follows it |
+| A range deleted across paragraphs while someone types in what remains | the typing is kept in the merged paragraph |
+| Typing at the end of a paragraph while someone adds a paragraph after it | the typing stays in its paragraph |
+| A block is **deleted** while someone types in it | the block is gone for everybody, including what was typed in it meanwhile (undoing the deletion brings both back) |
 | Block attributes / type (heading level, checked, alignment…) | last-writer-wins **per block** (the whole attrs object) |
-| Insert / delete blocks | merged; order is the Yjs array order |
-| **Move** a block | a move is delete + insert. Edits made concurrently *inside* a block that another user moves are lost; two users moving the **same** block concurrently produce **two copies**. One copy keeps the id, the other is deterministically renamed on every client (`id-<client>-<clock>`). |
+| Insert / delete blocks | merged; order is the Yjs array order. Two blocks split off one paragraph at the same moment are put into reading order by one of the clients. |
+| **Move** a block | the text of a moved block (and of the blocks inside it) stays where it is in the shared text, so what others type in it meanwhile is kept. Type, attributes and the list of children are re-created by the move: a concurrent change of those to the same block is lost. Two users moving the **same** block at once leave one block: every client keeps the entry that was created first and deletes the other. |
 | Offline edits | kept in the local Y.Doc and merged on reconnect; persist them with `persistDoc` to survive reloads |
 | **Table shape** (concurrent row + column insertion, deletes) | cell lists merge independently, so rows can end up with different lengths. Rendering tolerates ragged rows; the table is padded back to a rectangle before the next local structural edit to it (`repairTable`). A row span that no longer fits is clamped when the grid is laid out. |
 | Nesting a block under one whose type another user changes | the children are kept even if the new type would not normally nest |
@@ -86,9 +120,12 @@ tested through the in-memory hub.)
 
 **Undo** is per user (`Y.UndoManager` tracking only local origins): undoing reverts your own
 edits and leaves other authors' independent edits in place. The selection is restored with each
-undo step. Remote changes never enter your undo stack.
+undo step (stored as Yjs relative positions, so it is right even if others typed before it in
+the meantime). Remote changes never enter your undo stack.
 
-**Presence**: each client publishes `{ user, selection }`. Remote carets and names are drawn in
+**Presence**: each client publishes `{ user, selection, rel }` — `selection` as plain offsets
+and `rel` as Yjs relative positions, which is what other clients resolve so a caret stays on
+its character while edits are in flight. Remote carets and names are drawn in
 an overlay; remote selections use CSS highlights. A client that disconnects cleanly removes its
 presence immediately; a crashed client times out via the awareness protocol (30 s).
 

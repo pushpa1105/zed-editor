@@ -130,6 +130,65 @@ export function replaceInline(content: readonly Inline[] | undefined, from: numb
   return normalizeInline([...sliceInline(content, 0, from), ...insert, ...sliceInline(content, to)]);
 }
 
+export interface InlineChange {
+  /** `[from, to)` of the old content is replaced by `insert` */
+  from: number;
+  to: number;
+  insert: Inline[];
+  /**
+   * Set when the replaced text and `insert` have the same characters and only marks differ:
+   * the mark changes as ranges (absolute offsets; `null` removes a mark).
+   */
+  formats: { from: number; to: number; marks: Record<string, any> }[] | null;
+}
+/**
+ * The smallest single span in which two versions of a block's text differ (characters or
+ * marks), or null when they are equal. Never splits a surrogate pair.
+ */
+export function diffInline(old: readonly Inline[] | undefined, next: readonly Inline[] | undefined): InlineChange | null {
+  type Unit = { ch: string | InlineAtom; marks: MarkSet | undefined };
+  const units = (content: readonly Inline[] | undefined) => {
+    const out: Unit[] = [];
+    for (const c of content ?? []) {
+      if (isAtom(c)) out.push({ ch: c, marks: c.marks });
+      else for (let i = 0; i < c.text.length; i++) out.push({ ch: c.text[i], marks: c.marks });
+    }
+    return out;
+  };
+  const a = units(old);
+  const b = units(next);
+  const sameChar = (x: Unit, y: Unit) => (typeof x.ch === 'string' || typeof y.ch === 'string' ? x.ch === y.ch : x.ch.atom === y.ch.atom && jsonEq(x.ch.attrs ?? {}, y.ch.attrs ?? {}));
+  const eq = (x: Unit, y: Unit) => sameChar(x, y) && marksEq(x.marks, y.marks);
+  const half = (u: Unit | undefined, lo: number, hi: number) => typeof u?.ch === 'string' && u.ch.charCodeAt(0) >= lo && u.ch.charCodeAt(0) <= hi;
+  const max = Math.min(a.length, b.length);
+  let pre = 0;
+  while (pre < max && eq(a[pre], b[pre])) pre++;
+  let suf = 0;
+  while (suf < max - pre && eq(a[a.length - 1 - suf], b[b.length - 1 - suf])) suf++;
+  if (pre > 0 && half(a[pre - 1], 0xd800, 0xdbff)) pre--;
+  if (suf > 0 && half(a[a.length - suf], 0xdc00, 0xdfff)) suf--;
+  if (pre === a.length && pre === b.length) return null;
+  const to = a.length - suf;
+  let formats: InlineChange['formats'] = null;
+  if (a.length === b.length) {
+    formats = [];
+    for (let i = pre; i < to; i++) {
+      if (!sameChar(a[i], b[i])) {
+        formats = null;
+        break;
+      }
+      const marks: Record<string, any> = {};
+      for (const k in a[i].marks) if (!b[i].marks || !(k in b[i].marks!)) marks[k] = null;
+      for (const k in b[i].marks) if (!jsonEq(a[i].marks?.[k], b[i].marks![k])) marks[k] = b[i].marks![k];
+      const last = formats[formats.length - 1];
+      if (!Object.keys(marks).length) continue;
+      if (last && last.to === i && jsonEq(last.marks, marks)) last.to = i + 1;
+      else formats.push({ from: i, to: i + 1, marks });
+    }
+  }
+  return { from: pre, to, insert: sliceInline(next, pre, b.length - suf), formats };
+}
+
 /** Marks of the character before `offset` (or after it at offset 0). */
 export function marksAt(content: readonly Inline[] | undefined, offset: number): MarkSet | undefined {
   if (!content || !content.length) return undefined;

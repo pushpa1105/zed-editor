@@ -9,7 +9,7 @@ hand._ Guides explain how these fit together: [user guide](user-guide.md),
 Each entry shows the signature, the source file, and the doc comment where there is one. Types and
 interfaces list their members.
 
-- [`@buffmomo/zeditor/core`](#buffmomozeditorcore) — 288 exports
+- [`@buffmomo/zeditor/core`](#buffmomozeditorcore) — 290 exports
 - [`@buffmomo/zeditor`](#buffmomozeditor) — 44 exports
 - [`@buffmomo/zeditor/react`](#buffmomozeditorreact) — 9 exports
 - [`@buffmomo/zeditor/vue`](#buffmomozeditorvue) — 6 exports
@@ -36,7 +36,7 @@ activePage(editor: Editor): Block | null
 applyBlockChanges(editor: Editor, batch: Partial<SyncBatch>, opts?: { origin?: string | undefined; }): boolean
 ```
 
-Apply a batch received from the server. Blocks are created, updated, moved or deleted to match; parents missing from the document put new blocks at the top level. Not an undo step; tagged with origin 'remote' (pass another `origin` if you need to tell sources apart).
+Apply a batch received from the server. Blocks are created, updated, moved or deleted to match; parents missing from the document put new blocks at the top level. Not an undo step; tagged with origin 'remote' (pass another `origin` if you need to tell sources apart). Text is changed only where it differs, so the user's caret keeps its place in a block somebody else edited (text added exactly at the caret goes after it).
 
 <sub>src/features/sync.ts</sub>
 
@@ -412,6 +412,16 @@ Delete everything between two points (from <= to in document order) and join the
 
 <sub>src/core/commands.ts</sub>
 
+#### `diffInline`
+
+```ts
+diffInline(old: readonly Inline[] | undefined, next: readonly Inline[] | undefined): InlineChange | null
+```
+
+The smallest single span in which two versions of a block's text differ (characters or marks), or null when they are equal. Never splits a surrogate pair.
+
+<sub>src/core/model.ts</sub>
+
 #### `emptyId`
 
 ```ts
@@ -723,10 +733,10 @@ Map an offset in block `id` through a step. `assoc` decides the side at an inser
 #### `mapSelection`
 
 ```ts
-mapSelection(sel: Selection | null, steps: readonly Step[], doc: Doc, schema: Schema): Selection | null
+mapSelection(sel: Selection | null, steps: readonly Step[], doc: Doc, schema: Schema, foreign?: boolean): Selection | null
 ```
 
-Map a selection through steps that were already applied to `doc`.
+Map a selection through steps that were already applied to `doc`. `foreign` marks steps the user did not make (another author, a server update). Text such a step inserts exactly at the caret goes *after* the caret, and text inserted at an edge of a selection stays outside it. Without this, two people typing at one position push each other's caret forward and their characters interleave.
 
 <sub>src/core/selection.ts</sub>
 
@@ -2771,6 +2781,21 @@ interface InlineAtom
 | `attrs?: Attrs \| undefined` |  |
 | `marks?: MarkSet \| undefined` |  |
 
+#### `InlineChange`
+
+```ts
+interface InlineChange
+```
+
+<sub>src/core/model.ts</sub>
+
+| Member | Description |
+| --- | --- |
+| `from: number` | `[from, to)` of the old content is replaced by `insert` |
+| `to: number` |  |
+| `insert: Inline[]` |  |
+| `formats: { from: number; to: number; marks: Record<string, any>; }[] \| null` | Set when the replaced text and `insert` have the same characters and only marks differ: the mark changes as ranges (absolute offsets; `null` removes a mark). |
+
 #### `InputRule`
 
 ```ts
@@ -3239,7 +3264,7 @@ interface UpdateOptions
 | --- | --- |
 | `history?: boolean \| undefined` | record in undo history (default true) |
 | `group?: string \| undefined` | consecutive transactions with the same group merge into one undo entry |
-| `origin?: string \| undefined` | who produced the change: 'local' (default), 'remote', 'history', or a custom string |
+| `origin?: string \| undefined` | who produced the change: 'local' (default), 'remote', 'history', or a custom string. With 'remote' (or `tr.setMeta('foreign', true)` under a custom origin) text inserted exactly at the user's caret lands after it, so the caret does not jump over other people's typing. |
 
 #### `UploadResult`
 

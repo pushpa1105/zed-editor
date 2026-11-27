@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-26T19:23:06.220Z",
+  "date": "2026-11-27T16:34:58.574Z",
   "tarball": "buffmomo-zeditor-0.1.0.tgz",
   "checks": [
     {
@@ -11,60 +11,60 @@
     {
       "name": "vanilla: install only the tarball",
       "ok": true,
-      "ms": 3125,
+      "ms": 3275,
       "detail": "node_modules: @buffmomo"
     },
     {
       "name": "vanilla: no-build HTML example runs from node_modules in Chromium",
       "ok": true,
-      "ms": 1022,
+      "ms": 1264,
       "detail": "mounted, typed, switched mode, saved and reloaded JSON, CSS applied, no console errors"
     },
     {
       "name": "node: headless ESM import, transform, validate, serialize",
       "ok": true,
-      "ms": 132,
+      "ms": 121,
       "detail": "ok heading,list,table"
     },
     {
       "name": "node: SSR-safe import of the DOM entry (no window access at import time)",
       "ok": true,
-      "ms": 124,
+      "ms": 110,
       "detail": "ok"
     },
     {
       "name": "types: install tarball with peers",
       "ok": true,
-      "ms": 11603,
+      "ms": 8086,
       "detail": "installed"
     },
     {
       "name": "types: a strict TypeScript project type-checks every public entry point",
       "ok": true,
-      "ms": 3957,
+      "ms": 3651,
       "detail": "tsc --strict passed (skipLibCheck off)"
     },
     {
       "name": "node: SSR-safe import of the React and Vue adapters; React renders on the server",
       "ok": true,
-      "ms": 285,
+      "ms": 248,
       "detail": "ok <div class=\"host\"></div>"
     },
     {
       "name": "react: example builds against the tarball",
       "ok": true,
-      "ms": 25328,
-      "detail": "built: index-Bd8k2H7S.css, index-C54mrP-I.js"
+      "ms": 19108,
+      "detail": "built: index-BzPte_7Y.css, index-C1bd09tx.js"
     },
     {
       "name": "vue-vuetify: example builds against the tarball",
       "ok": true,
-      "ms": 35213,
-      "detail": "built: index-BPgvalCT.js, index-CbMY3rZC.css"
+      "ms": 29140,
+      "detail": "built: index-C1K0BYSp.js, index-CQnWuR9-.css"
     }
   ],
   "files": 63,
-  "unpackedKB": 4510,
-  "packedKB": 1156,
+  "unpackedKB": 4701,
+  "packedKB": 1208,
   "ok": true
 }

@@ -89,7 +89,8 @@ export const commentsExtension: Extension = {
       type: 'comment',
       rank: 5,
       inclusive: false,
-      attrs: { ids: { validate: (x) => (Array.isArray(x) ? x.filter((i) => typeof i === 'string' && /^[\w:.-]{1,64}$/.test(i)).slice(0, 50) : undefined) } },
+      // kept sorted: the order carries no meaning, and every collaborator must build the same value
+      attrs: { ids: { validate: (x) => (Array.isArray(x) ? x.filter((i) => typeof i === 'string' && /^[\w:.-]{1,64}$/.test(i)).slice(0, 50).sort() : undefined) } },
       toHTML: (x) => [`<span data-comment="${esc((x.ids ?? []).join(' '))}">`, '</span>'],
       toMarkdown: () => ['', ''],
       parseHTML: [{ tag: 'span', match: (el) => !!el.attrs['data-comment'], getAttrs: (el) => ({ ids: el.attrs['data-comment'].split(/\s+/).filter(Boolean) }) }],
@@ -186,7 +187,7 @@ export function createComments(editor: Editor, opts: { store?: CommentStore; use
             const has = ids.includes(threadId);
             if (add === has) return p;
             changed = true;
-            const nids = add ? [...ids, threadId] : ids.filter((i) => i !== threadId);
+            const nids = add ? [...ids, threadId].sort() : ids.filter((i) => i !== threadId);
             const marks: MarkSet = { ...(p.marks ?? {}) };
             if (nids.length) marks.comment = { ids: nids };
             else delete marks.comment;

@@ -72,6 +72,14 @@ export function createTypeahead(editor: Editor, host: HTMLElement, opts: Typeahe
     return list;
   };
 
+  /** the "/" came from the "+" button and nothing was typed after it: remove it again */
+  const takeBackPlus = () => {
+    const id = editor.storage.plusSlash as string | undefined;
+    if (!id) return;
+    editor.storage.plusSlash = undefined;
+    const b = editor.doc.get(id);
+    if (b && b.text === '/' && !editor.readOnly) editor.update((tr) => void tr.replaceText(id, 0, 1));
+  };
   const close = () => {
     if (active) runners.get(active.source)?.cancel();
     active = null;
@@ -118,6 +126,7 @@ export function createTypeahead(editor: Editor, host: HTMLElement, opts: Typeahe
     const a = active;
     const it = items[i];
     if (!a || !it) return;
+    editor.storage.plusSlash = undefined;
     close();
     a.source.select(editor, it, { id: a.id, from: a.from, to: a.to });
   };
@@ -148,6 +157,15 @@ export function createTypeahead(editor: Editor, host: HTMLElement, opts: Typeahe
       return;
     }
     const next = detect();
+    const plus = editor.storage.plusSlash as string | undefined;
+    if (plus && (!next || next.id !== plus)) {
+      // the caret left the block (or more than the "/" is gone)
+      if (editor.doc.get(plus)?.text === '/') {
+        takeBackPlus();
+        return;
+      }
+      editor.storage.plusSlash = undefined;
+    } else if (plus && next && next.query) editor.storage.plusSlash = undefined; // the user is typing a query: it is their text now
     if (!next) {
       dismissedAt = null;
       close();
@@ -188,7 +206,9 @@ export function createTypeahead(editor: Editor, host: HTMLElement, opts: Typeahe
       e.preventDefault();
       e.stopPropagation();
       dismissedAt = active.source.name + ':' + active.id + ':' + active.from;
+      const fromPlus = editor.storage.plusSlash === active.id;
       close();
+      if (fromPlus) takeBackPlus();
       return;
     }
     if (!items.length) return;
@@ -361,6 +381,7 @@ export function createBlockHandles(editor: Editor, host: HTMLElement, opts: Bloc
     editor.setSelection(textSel(id, 0));
     editor.focus();
     editor.exec('insertText', '/', { rules: false });
+    editor.storage.plusSlash = id;
   });
 
   /* ---- action menu */

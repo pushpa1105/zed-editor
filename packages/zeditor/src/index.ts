@@ -180,11 +180,18 @@ export function createEditor(options: CreateEditorOptions): ZEditor {
   const wrapper = h('div', { class: 'zeditor' + (options.unstyled ? '' : ' z-theme'), 'data-mode': editor.mode, 'data-theme': theme });
   // hint shown on the empty paragraph that holds the caret in block mode
   wrapper.style.setProperty('--z-block-placeholder', JSON.stringify(editor.label('placeholder.block')));
+  // ...and on other empty blocks that hold the caret
+  for (const k of ['todo', 'list', 'heading', 'quote']) wrapper.style.setProperty('--z-ph-' + k, JSON.stringify(editor.label('placeholder.' + k)));
   const top = h('div', { class: 'z-top' });
   const scroll = h('div', { class: 'z-scroll' });
   if (options.maxHeight) scroll.style.maxHeight = options.maxHeight;
   const content = h('div', { class: 'z-editable' });
-  if (options.placeholder ?? editor.label('placeholder')) content.dataset.placeholder = options.placeholder ?? editor.label('placeholder');
+  const placeholder = options.placeholder ?? editor.label('placeholder');
+  if (placeholder) {
+    content.dataset.placeholder = placeholder;
+    // CSS reads the variable: the hint is drawn inside the empty block, not on the editing area
+    content.style.setProperty('--z-placeholder', JSON.stringify(placeholder));
+  }
   const bottom = h('div', { class: 'z-bottom' });
   scroll.append(content);
   wrapper.append(top, scroll, bottom);

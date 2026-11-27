@@ -35,7 +35,11 @@ export interface UpdateOptions {
   history?: boolean;
   /** consecutive transactions with the same group merge into one undo entry */
   group?: string;
-  /** who produced the change: 'local' (default), 'remote', 'history', or a custom string */
+  /**
+   * who produced the change: 'local' (default), 'remote', 'history', or a custom string.
+   * With 'remote' (or `tr.setMeta('foreign', true)` under a custom origin) text inserted exactly
+   * at the user's caret lands after it, so the caret does not jump over other people's typing.
+   */
   origin?: string;
 }
 
@@ -535,13 +539,19 @@ export class Editor {
     }
     this.tr = null;
     const prevSel = this.selection;
-    const next = tr.selection !== undefined ? fixSelection(tr.selection, this.doc, this.schema) : mapSelection(prevSel, tr.steps, this.doc, this.schema);
+    // a change the user did not make (another author, the server): see mapSelection
+    const foreign = origin === 'remote' || tr.meta.foreign === true;
+    const next = tr.selection !== undefined ? fixSelection(tr.selection, this.doc, this.schema) : mapSelection(prevSel, tr.steps, this.doc, this.schema, foreign);
     this.selection = next;
     const selectionChanged = !selEq(prevSel, next);
     const docChanged = tr.docChanged;
     if (!docChanged && !selectionChanged && !tr.meta.force) return true;
+    // someone else's edit must not drop the formatting the user armed for their next character,
+    // as long as their caret is still a caret in the same block
+    const caretIn = (s: Selection | null) => (s?.type === 'text' && s.anchor.id === s.focus.id && s.anchor.offset === s.focus.offset ? s.anchor.id : null);
+    const keepStored = foreign && caretIn(prevSel) !== null && caretIn(prevSel) === caretIn(next);
     if (tr.meta.storedMarks !== undefined) this.storedMarks = tr.meta.storedMarks;
-    else if (selectionChanged || docChanged) this.storedMarks = null;
+    else if ((selectionChanged || docChanged) && !keepStored) this.storedMarks = null;
     if (docChanged) {
       this.revision++;
       if (opts.history !== false && tr.meta.history !== false && this.builtinHistory && this.history === this.builtinHistory)

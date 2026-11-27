@@ -12,7 +12,7 @@
  * another tab). It is tagged with origin 'remote', so it is not pushed back.
  */
 import type { Editor } from '../core/editor';
-import type { Attrs, Block, BlockJSON, Inline } from '../core/model';
+import { Attrs, Block, BlockJSON, Inline, diffInline } from '../core/model';
 import type { BlockChanges } from '../core/events';
 
 export interface SyncBlock {
@@ -223,11 +223,15 @@ export function createBlockSync(editor: Editor, opts: BlockSyncOptions): BlockSy
  * Apply a batch received from the server. Blocks are created, updated, moved or deleted to
  * match; parents missing from the document put new blocks at the top level. Not an undo step;
  * tagged with origin 'remote' (pass another `origin` if you need to tell sources apart).
+ *
+ * Text is changed only where it differs, so the user's caret keeps its place in a block
+ * somebody else edited (text added exactly at the caret goes after it).
  */
 export function applyBlockChanges(editor: Editor, batch: Partial<SyncBatch>, opts: { origin?: string } = {}): boolean {
   return editor.update(
     (tr) => {
       const doc = editor.doc;
+      tr.setMeta('foreign', true);
       for (const id of batch.deleted ?? []) if (doc.has(id)) tr.remove(id);
       for (const s of batch.upserted ?? []) {
         const parent = s.parentId && doc.has(s.parentId) ? s.parentId : 'root';
@@ -250,7 +254,10 @@ export function applyBlockChanges(editor: Editor, batch: Partial<SyncBatch>, opt
           continue;
         }
         if (s.type !== b.type || (s.attrs && JSON.stringify(s.attrs) !== JSON.stringify(b.attrs))) tr.step({ t: 'attrs', id: b.id, ...(s.type !== b.type ? { type: s.type } : {}), attrs: s.attrs ?? b.attrs });
-        if (s.content && b.content && JSON.stringify(s.content) !== JSON.stringify(b.content)) tr.replaceText(b.id, 0, b.length, s.content);
+        if (s.content && b.content) {
+          const change = diffInline(b.content, s.content);
+          if (change) tr.replaceText(b.id, change.from, change.to, change.insert);
+        }
         if (b.parent !== p) {
           tr.move([b.id], parent, indexOf());
         }

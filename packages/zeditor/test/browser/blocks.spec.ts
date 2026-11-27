@@ -38,6 +38,76 @@ test.describe('block mode', () => {
     await noErrors(page);
   });
 
+  test('placeholder of an empty document starts after the checkbox / bullet, not on top of it', async ({ page }) => {
+    for (const kind of ['check', 'bullet', 'ordered']) {
+      await open(page, { content: [{ id: 'a', type: 'list', attrs: kind === 'check' ? { kind, checked: false } : { kind } }], mode: 'block', placeholder: 'Write, or type / for commands' });
+      await root(page).click();
+      const m = await page.evaluate(() => {
+        const content = document.querySelector('#a .z-list .z-content') as HTMLElement;
+        const marker = document.querySelector('#a .z-list > .z-marker') as HTMLElement;
+        const before = getComputedStyle(content, '::before');
+        return { text: before.content, hintLeft: content.getBoundingClientRect().left, markerRight: marker.getBoundingClientRect().right, onRoot: getComputedStyle(document.querySelector('#a .z-root')!, '::before').content };
+      });
+      expect(m.text).toBe('"Write, or type / for commands"');
+      expect(m.onRoot).toBe('none');
+      expect(m.hintLeft).toBeGreaterThanOrEqual(m.markerRight);
+    }
+    // typing removes it
+    await page.keyboard.type('x');
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('#a .z-list .z-content')!, '::before').content)).toBe('none');
+    await noErrors(page);
+  });
+
+  test('an empty to-do, list item, heading or quote that holds the caret says what it is', async ({ page }) => {
+    await open(page, {
+      content: [p('text', 'a'), { id: 'c', type: 'list', attrs: { kind: 'check', checked: false } }, { id: 'b', type: 'list', attrs: { kind: 'bullet' } }, { id: 'h', type: 'heading', attrs: { level: 2 } }, { id: 'q', type: 'quote' }],
+      mode: 'block',
+    });
+    const hint = (id: string) => page.evaluate((id) => getComputedStyle(document.querySelector(`#a [data-zid="${id}"] .z-content`)!, '::before').content, id);
+    for (const [id, text] of [['c', 'To-do'], ['b', 'List'], ['h', 'Heading'], ['q', 'Quote']]) {
+      await setSel(page, id, 0);
+      expect(await hint(id)).toBe(`"${text}"`);
+    }
+    // only the block with the caret, and only while it is empty
+    expect(await hint('c')).toBe('none');
+    await page.keyboard.type('x');
+    expect(await hint('q')).toBe('none');
+    await noErrors(page);
+  });
+
+  test('the "+" button: a dismissed menu takes its slash back; a typed slash stays', async ({ page }) => {
+    await open(page, { content: [p('one', 'a'), p('two', 'b')], mode: 'block' });
+    await setSel(page, 'a', 0);
+    const menu = page.locator('#a .z-typeahead');
+    const plus = page.locator('.z-handles .z-handle-btn').first();
+    await page.locator('#a [data-zid="a"]').hover();
+    await plus.click();
+    await expect(menu).toBeVisible();
+    expect(await texts(page)).toBe('one|/|two');
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    expect(await texts(page)).toBe('one||two');
+    // moving the caret away does the same
+    await plus.click();
+    await expect(menu).toBeVisible();
+    await setSel(page, 'b', 1);
+    await expect(menu).toBeHidden();
+    expect(await texts(page)).toBe('one||two');
+    // a query typed after it makes it the user's text
+    await setSel(page, 'a', 0);
+    await plus.click();
+    await page.keyboard.type('zzz');
+    await page.keyboard.press('Escape');
+    expect(await texts(page)).toContain('/zzz');
+    // choosing an item still works
+    await setSel(page, 'b', 0);
+    await plus.click();
+    await page.keyboard.type('head');
+    await page.keyboard.press('Enter');
+    expect((await json(page)).some((b: any) => b.type === 'heading')).toBe(true);
+    await noErrors(page);
+  });
+
   test('slash menu is not shown in classic mode', async ({ page }) => {
     await open(page, { content: [p('', 'a')], mode: 'classic' });
     await root(page).click();

@@ -131,16 +131,39 @@ export function topMost(doc: Doc, ids: Iterable<string>): Block[] {
   return out.sort((a, b) => doc.compare(a, b));
 }
 
-/** Map a selection through steps that were already applied to `doc`. */
-export function mapSelection(sel: Selection | null, steps: readonly Step[], doc: Doc, schema: Schema): Selection | null {
+/**
+ * Map a selection through steps that were already applied to `doc`.
+ *
+ * `foreign` marks steps the user did not make (another author, a server update). Text such a
+ * step inserts exactly at the caret goes *after* the caret, and text inserted at an edge of
+ * a selection stays outside it. Without this, two people typing at one position push each
+ * other's caret forward and their characters interleave.
+ */
+export function mapSelection(sel: Selection | null, steps: readonly Step[], doc: Doc, schema: Schema, foreign = false): Selection | null {
   if (!sel) return null;
   if (sel.type === 'text') {
     let a = sel.anchor.offset;
     let f = sel.focus.offset;
-    for (const s of steps) {
-      a = mapOffset(s, sel.anchor.id, a);
-      f = mapOffset(s, sel.focus.id, f);
+    let aSide: -1 | 1 = 1;
+    let fSide: -1 | 1 = 1;
+    if (foreign) {
+      const sameBlock = sel.anchor.id === sel.focus.id;
+      if (sameBlock && a === f) aSide = fSide = -1;
+      else {
+        const ab = doc.get(sel.anchor.id);
+        const fb = doc.get(sel.focus.id);
+        const forward = sameBlock || !ab || !fb ? a <= f : doc.compare(ab, fb) < 0;
+        // the end of the range stays put, the start moves right
+        if (forward) fSide = -1;
+        else aSide = -1;
+      }
     }
+    for (const s of steps) {
+      a = mapOffset(s, sel.anchor.id, a, aSide);
+      f = mapOffset(s, sel.focus.id, f, fSide);
+    }
+    // a range whose text was all removed must not come back inverted
+    if (foreign && sel.anchor.id === sel.focus.id && sel.anchor.offset !== sel.focus.offset && (sel.anchor.offset < sel.focus.offset ? a > f : a < f)) a = f = Math.min(a, f);
     return fixSelection({ type: 'text', anchor: { id: sel.anchor.id, offset: a }, focus: { id: sel.focus.id, offset: f } }, doc, schema);
   }
   return fixSelection(sel, doc, schema);

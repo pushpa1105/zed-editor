@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as Y from 'yjs';
 import { make, p, resetIds, checkInvariants, caret, texts, mulberry } from './helpers';
-import { createCollab, connectSync, memoryHub, yCommentStore, Collab, SyncHandle, Transport, persistDoc } from '../../src/collab';
+import { createCollab, connectSync, memoryHub, yCommentStore, Collab, SyncHandle, Transport, persistDoc, sharedBlocks } from '../../src/collab';
 import { Editor, createComments, createTable, textSel, blockSel } from '../../src/core';
 
 beforeEach(resetIds);
@@ -229,7 +229,7 @@ describe('collaboration', () => {
     c.destroy();
   });
 
-  for (const seed of [11, 12, 13, 14]) {
+  for (const seed of [11, 12, 13, 14, 15, 16, 17, 18]) {
     it(`randomized concurrent editing converges (seed ${seed})`, async () => {
       const r = mulberry(seed * 104729);
       const hub = memoryHub();
@@ -284,12 +284,16 @@ describe('collaboration', () => {
       await flush();
       await flush();
       for (const cl of clients) checkInvariants(cl.e);
+      // every editor shows exactly what its shared document holds...
+      for (const cl of clients) expect((cl.c as any)._verify()).toBe(null);
       // the shared state is identical...
       expect(Y.encodeStateVector(B.doc)).toEqual(Y.encodeStateVector(A.doc));
       // ...and every editor shows the same document
-      const strip = (e: Editor) => JSON.stringify(e.getJSON().blocks);
-      expect(strip(B.e)).toBe(strip(A.e));
-      expect(strip(C.e)).toBe(strip(A.e));
+      // (compared as data: two clients may hold the same attributes in a different key order)
+      expect(B.e.getJSON().blocks).toEqual(A.e.getJSON().blocks);
+      expect(C.e.getJSON().blocks).toEqual(A.e.getJSON().blocks);
+      // ...which is what the shared document holds
+      expect(sharedBlocks(A.doc, A.e)).toEqual(A.e.getJSON().blocks);
     });
   }
 });

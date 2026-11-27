@@ -242,7 +242,8 @@ It accepts the same `SyncBatch` shape (all fields optional):
 - Creates unknown blocks under their parent (top level if the parent is missing), at `afterId`
   or `index`. New blocks are validated like loaded content.
 - Updates the type, attributes and text of existing blocks, and moves them if their parent
-  changed.
+  changed. Only the part of a block's text that differs is replaced, so the user's caret keeps
+  its place in a block someone else edited.
 - Reorders children to match `order`.
 
 For real-time co-editing of the *same* block by several people, use the CRDT-based
