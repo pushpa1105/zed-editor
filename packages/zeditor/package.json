@@ -1,6 +1,6 @@
 {
   "name": "@buffmomo/zeditor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Extensible rich-text and block editor with classic and block modes. One engine; vanilla, React and Vue 3 integrations.",
   "license": "MIT",
   "author": "pushpa1105",

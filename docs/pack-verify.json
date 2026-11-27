@@ -1,6 +1,6 @@
 {
-  "date": "2026-11-27T16:34:58.574Z",
-  "tarball": "buffmomo-zeditor-0.1.0.tgz",
+  "date": "2026-11-27T18:07:51.521Z",
+  "tarball": "buffmomo-zeditor-0.2.0.tgz",
   "checks": [
     {
       "name": "tarball contents",
@@ -11,55 +11,55 @@
     {
       "name": "vanilla: install only the tarball",
       "ok": true,
-      "ms": 3275,
+      "ms": 5010,
       "detail": "node_modules: @buffmomo"
     },
     {
       "name": "vanilla: no-build HTML example runs from node_modules in Chromium",
       "ok": true,
-      "ms": 1264,
+      "ms": 972,
       "detail": "mounted, typed, switched mode, saved and reloaded JSON, CSS applied, no console errors"
     },
     {
       "name": "node: headless ESM import, transform, validate, serialize",
       "ok": true,
-      "ms": 121,
+      "ms": 128,
       "detail": "ok heading,list,table"
     },
     {
       "name": "node: SSR-safe import of the DOM entry (no window access at import time)",
       "ok": true,
-      "ms": 110,
+      "ms": 108,
       "detail": "ok"
     },
     {
       "name": "types: install tarball with peers",
       "ok": true,
-      "ms": 8086,
+      "ms": 9442,
       "detail": "installed"
     },
     {
       "name": "types: a strict TypeScript project type-checks every public entry point",
       "ok": true,
-      "ms": 3651,
+      "ms": 3559,
       "detail": "tsc --strict passed (skipLibCheck off)"
     },
     {
       "name": "node: SSR-safe import of the React and Vue adapters; React renders on the server",
       "ok": true,
-      "ms": 248,
+      "ms": 252,
       "detail": "ok <div class=\"host\"></div>"
     },
     {
       "name": "react: example builds against the tarball",
       "ok": true,
-      "ms": 19108,
+      "ms": 26652,
       "detail": "built: index-BzPte_7Y.css, index-C1bd09tx.js"
     },
     {
       "name": "vue-vuetify: example builds against the tarball",
       "ok": true,
-      "ms": 29140,
+      "ms": 33191,
       "detail": "built: index-C1K0BYSp.js, index-CQnWuR9-.css"
     }
   ],
